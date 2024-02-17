@@ -7,4 +7,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Tmds.DBus" Version="0.16.0" />
+  </ItemGroup>
+
 </Project>
