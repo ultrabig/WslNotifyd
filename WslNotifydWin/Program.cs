@@ -29,10 +29,6 @@ internal class Program
             throw new Exception($"Registry {key} not found");
         }
         var aumIdList = aumSubKey.GetSubKeyNames();
-        foreach (var n in aumIdList)
-        {
-            Console.WriteLine(n);
-        }
 
         using var wslAumSubKey = aumIdList.Contains(wslAumId) ? aumSubKey.OpenSubKey(wslAumId, true)! : aumSubKey.CreateSubKey(wslAumId);
 
@@ -48,6 +44,7 @@ internal class Program
         var aumId = "WslNotifyd-aumid";
         SetupRegistry(aumId);
         var exitTask = new TaskCompletionSource();
+        // NOTE: CancelKeyPress is actually not called when executed by processes on WSL
         Console.CancelKeyPress += (sender, e) =>
         {
             e.Cancel = true;
