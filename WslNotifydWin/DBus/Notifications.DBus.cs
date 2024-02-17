@@ -21,18 +21,23 @@ namespace WslNotifydWin.DBus
     class Notifications : INotifications
     {
         private uint _sequence = 0;
+        private readonly ToastNotifier _notifier;
         private readonly ConcurrentDictionary<string, ToastNotification> _toastHistory = new();
         public ObjectPath ObjectPath => new("/org/freedesktop/Notifications");
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
 
+        public Notifications(string aumId)
+        {
+            _notifier = ToastNotificationManager.CreateToastNotifier(aumId);
+        }
+
         public Task CloseNotificationAsync(uint Id)
         {
             Console.WriteLine("notification {0} has been requested to close", Id);
-            var notifier = ToastNotificationManager.CreateToastNotifier();
             if (_toastHistory.TryGetValue(Id.ToString(), out var notif))
             {
-                notifier.Hide(notif);
+                _notifier.Hide(notif);
             }
             return Task.CompletedTask;
         }
@@ -126,11 +131,7 @@ namespace WslNotifydWin.DBus
             notif.Activated += HandleActivated;
             notif.Dismissed += HandleDismissed;
 
-            // var notifier = ToastNotificationManager.CreateToastNotifier("MicrosoftCorporationII.WindowsSubsystemForLinux_8wekyb3d8bbwe!wsl");
-            var notifier = ToastNotificationManager.CreateToastNotifier("WslNotifyd-aumid");
-            // var notifier = ToastNotificationManager.CreateToastNotifier();
-
-            notifier.Show(notif);
+            _notifier.Show(notif);
 
             _toastHistory[notif.Tag] = notif;
             return Task.FromResult(tagId);
