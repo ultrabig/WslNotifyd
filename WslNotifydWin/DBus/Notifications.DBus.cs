@@ -150,15 +150,18 @@ namespace WslNotifydWin.DBus
         private void HandleActivated(ToastNotification sender, object args)
         {
             Console.WriteLine("notification {0} has been activated", sender.Tag);
-            string actionKey = "";
+            string actionKey = "default";
             const uint reason = 2;
             if (args is ToastActivatedEventArgs eventArgs)
             {
-                actionKey = eventArgs.Arguments;
-                // foreach (var (k, v) in eventArgs.UserInput)
-                // {
-                //     Console.WriteLine("{0}: {1}", k, v);
-                // }
+                if (!string.IsNullOrEmpty(eventArgs.Arguments))
+                {
+                    actionKey = eventArgs.Arguments;
+                }
+                foreach (var (k, v) in eventArgs.UserInput)
+                {
+                    Console.WriteLine("{0}: {1}", k, v);
+                }
             }
             OnAction?.Invoke((uint.Parse(sender.Tag), actionKey));
             OnClose?.Invoke((uint.Parse(sender.Tag), reason));
