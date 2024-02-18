@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -30,9 +31,19 @@ internal class Program
     {
         var aumId = "WslNotifyd-aumid";
         SetupRegistry(aumId);
-        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings()
+
+        var initialConfig = new ConfigurationManager();
+        initialConfig.AddInMemoryCollection(new Dictionary<string, string?>()
+        {
+            // if reloadConfigOnChange == true, AddJsonFile freezes on WSL path
+            // https://github.com/dotnet/runtime/blob/1381d5ebd2ab1f292848d5b19b80cf71ac332508/src/libraries/Microsoft.Extensions.Hosting/src/HostingHostBuilderExtensions.cs#L262
+            // https://github.com/dotnet/runtime/blob/1381d5ebd2ab1f292848d5b19b80cf71ac332508/src/libraries/Microsoft.Extensions.Hosting/src/HostingHostBuilderExtensions.cs#L241
+            ["hostBuilder:reloadConfigOnChange"] = "false",
+        });
+        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings()
         {
             Args = args,
+            Configuration = initialConfig,
         });
         builder.Services.AddSingleton<IHostedService>(serviceProvider =>
         {
@@ -40,6 +51,7 @@ internal class Program
             var lifetime = serviceProvider.GetService<IHostApplicationLifetime>()!;
             return new DBusNotificationService(args[0], args[1], aumId, logger, lifetime);
         });
+
         var app = builder.Build();
         app.Run();
     }
