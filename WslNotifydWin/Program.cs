@@ -5,9 +5,14 @@ using WslNotifydWin.DBus;
 internal class Program
 {
 
-    private class ClientConnectionOptionsWithUserId(string address, string userId) : ClientConnectionOptions(address)
+    private class ClientConnectionOptionsWithUserId : ClientConnectionOptions
     {
-        private readonly string _userId = userId;
+        private readonly string _userId;
+
+        public ClientConnectionOptionsWithUserId(string address, string userId) : base(address)
+        {
+            _userId = userId;
+        }
 
         protected override async Task<ClientSetupResult> SetupAsync()
         {
