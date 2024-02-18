@@ -1,29 +1,11 @@
-﻿using Microsoft.Win32;
-using Tmds.DBus;
-using WslNotifydWin.DBus;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
+using WslNotifydWin.Services;
 
 internal class Program
 {
-
-    private class ClientConnectionOptionsWithUserId : ClientConnectionOptions
-    {
-        private readonly string _userId;
-
-        public ClientConnectionOptionsWithUserId(string address, string userId) : base(address)
-        {
-            _userId = userId;
-        }
-
-        protected override async Task<ClientSetupResult> SetupAsync()
-        {
-            // https://dbus.freedesktop.org/doc/dbus-specification.html#auth-mechanisms-external
-            // Use Linux's uid
-            var result = await base.SetupAsync();
-            result.UserId = _userId;
-            return result;
-        }
-    }
-
     private static void SetupRegistry(string wslAumId)
     {
         // https://learn.microsoft.com/en-us/windows/apps/design/shell/tiles-and-notifications/send-local-toast-other-apps#step-1-register-your-app-in-the-registry
@@ -44,36 +26,21 @@ internal class Program
         }
     }
 
-    private async static Task Main(string[] args)
+    private static void Main(string[] args)
     {
         var aumId = "WslNotifyd-aumid";
         SetupRegistry(aumId);
-        var exitTask = new TaskCompletionSource();
-        // NOTE: CancelKeyPress is actually not called when executed by processes on WSL
-        Console.CancelKeyPress += (sender, e) =>
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings()
         {
-            e.Cancel = true;
-            exitTask.TrySetResult();
-        };
-        using var conn = new Connection(new ClientConnectionOptionsWithUserId(args[0], args[1]));
-        conn.StateChanged += (sender, e) =>
+            Args = args,
+        });
+        builder.Services.AddSingleton<IHostedService>(serviceProvider =>
         {
-            switch (e.State)
-            {
-                case ConnectionState.Connected:
-                    Console.WriteLine("Connected");
-                    break;
-                case ConnectionState.Disconnected:
-                    Console.WriteLine("Disconnected");
-                    exitTask.TrySetResult();
-                    break;
-            }
-        };
-        Console.WriteLine("Connecting...");
-        await conn.ConnectAsync();
-        await conn.RegisterObjectAsync(new Notifications(aumId));
-        await conn.RegisterServiceAsync("org.freedesktop.Notifications");
-        Console.WriteLine("Ctrl-c to stop");
-        await exitTask.Task;
+            var logger = serviceProvider.GetService<ILogger<DBusNotificationService>>()!;
+            var lifetime = serviceProvider.GetService<IHostApplicationLifetime>()!;
+            return new DBusNotificationService(args[0], args[1], aumId, logger, lifetime);
+        });
+        var app = builder.Build();
+        app.Run();
     }
 }
