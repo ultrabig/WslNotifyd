@@ -87,6 +87,22 @@ namespace WslNotifydWin.DBus
             targetElement.AppendChild(node);
         }
 
+        private static string FilterXMLTag(string data)
+        {
+            try
+            {
+                var doc = new System.Xml.XmlDocument();
+                var root = doc.CreateElement("root");
+                root.InnerXml = data;
+                return root.InnerText;
+            }
+            catch (System.Xml.XmlException ex)
+            {
+                Console.WriteLine("Parse Error. fallback: {0}", ex.ToString());
+                return data;
+            }
+        }
+
         public Task<uint> NotifyAsync(string AppName, uint ReplacesId, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout)
         {
             Console.WriteLine("app_name: {0}, replaces_id: {1}, app_icon: {2}, summary: {3}, body: {4}, actions: [{5}], hints: [{6}], expire_timeout: {7}", AppName, ReplacesId, AppIcon, Summary, Body, string.Join(", ", Actions), string.Join(", ", Hints), ExpireTimeout);
@@ -97,7 +113,7 @@ namespace WslNotifydWin.DBus
 
             var binding = doc.SelectSingleNode("//binding[1]");
             AddText(binding, Summary);
-            AddText(binding, Body);
+            AddText(binding, FilterXMLTag(Body));
             AddText(binding, AppName, new() { { "placement", "attribution" }, });
 
             if (Actions.Length > 1)
