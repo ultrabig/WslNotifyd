@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using WslNotifyd.Extensions;
+using WslNotifyd.Libc;
 
 internal class Program
 {
@@ -8,14 +9,14 @@ internal class Program
     {
         var port = "12345";
         var host = "127.0.0.1";
-        var uid = "1000";
+        var uid = Libc.getuid().ToString();
         var builder = Host.CreateApplicationBuilder(args);
         builder.Services.AddProcessService(new ProcessStartInfo("socat")
         {
             UseShellExecute = false,
             ArgumentList = {
                 $"TCP-LISTEN:{port},reuseaddr,bind={host}",
-                "UNIX-CLIENT:/run/user/1000/bus",
+                $"UNIX-CLIENT:/run/user/{uid}/bus",
             },
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
