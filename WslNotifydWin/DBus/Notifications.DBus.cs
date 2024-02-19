@@ -102,16 +102,16 @@ namespace WslNotifydWin.DBus
                 return data;
             }
         }
- 
+
         public Task<uint> NotifyAsync(string AppName, uint ReplacesId, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout)
         {
             Console.WriteLine("app_name: {0}, replaces_id: {1}, app_icon: {2}, summary: {3}, body: {4}, actions: [{5}], hints: [{6}], expire_timeout: {7}", AppName, ReplacesId, AppIcon, Summary, Body, string.Join(", ", Actions), string.Join(", ", Hints), ExpireTimeout);
             var content = """<toast><visual><binding template="ToastGeneric"></binding></visual></toast>""";
             var doc = new XmlDocument();
             doc.LoadXml(content);
-            var toast = doc.SelectSingleNode("//toast[1]");
+            var toast = (XmlElement)doc.SelectSingleNode("//toast[1]");
 
-            var binding = doc.SelectSingleNode("//binding[1]");
+            var binding = (XmlElement)doc.SelectSingleNode("//binding[1]");
             AddText(binding, Summary);
             AddText(binding, FilterXMLTag(Body));
             AddText(binding, AppName, new() { { "placement", "attribution" }, });
@@ -139,7 +139,16 @@ namespace WslNotifydWin.DBus
 
             if (Hints.TryGetValue("urgency", out var urgencyObj) && urgencyObj is byte urgency && urgency == 2)
             {
-                ((XmlElement)toast).SetAttribute("scenario", "urgent");
+                toast.SetAttribute("scenario", "urgent");
+            }
+
+            if (ExpireTimeout > 0 && ExpireTimeout <= 5)
+            {
+                toast.SetAttribute("duration", "short");
+            }
+            else if (ExpireTimeout == 0 || ExpireTimeout > 5)
+            {
+                toast.SetAttribute("duration", "long");
             }
 
             var notif = new ToastNotification(doc)
