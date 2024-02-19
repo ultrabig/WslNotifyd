@@ -11,7 +11,7 @@ namespace WslNotifyd.Extensions
         public static IServiceCollection AddProcessService(this IServiceCollection services, ProcessStartInfo psi)
         {
             // https://github.com/dotnet/runtime/issues/38751#issuecomment-1158350910
-            // <IHostedServic> is required for StartAsync to be called
+            // <IHostedService> is required for StartAsync to be called
             services.AddSingleton<IHostedService>(serviceProvider =>
             {
                 var logger = serviceProvider.GetService<ILogger<ProcessService>>()!;
