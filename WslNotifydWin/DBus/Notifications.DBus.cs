@@ -137,6 +137,10 @@ namespace WslNotifydWin.DBus
                 tagId = ReplacesId;
             }
 
+            if (Hints.TryGetValue("urgency", out var urgencyObj) && urgencyObj is byte urgency && urgency == 2)
+            {
+                ((XmlElement)toast).SetAttribute("scenario", "urgent");
+            }
 
             var notif = new ToastNotification(doc)
             {
