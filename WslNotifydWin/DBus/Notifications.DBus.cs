@@ -87,6 +87,24 @@ namespace WslNotifydWin.DBus
             targetElement.AppendChild(node);
         }
 
+        private static void AddAudio(IXmlNode targetElement, string? src, bool? loop, bool? silent)
+        {
+            var node = targetElement.OwnerDocument.CreateElement("audio");
+            if (src != null)
+            {
+                node.SetAttribute("src", src);
+            }
+            if (loop is bool loopBool)
+            {
+                node.SetAttribute("loop", loopBool ? "true" : "false");
+            }
+            if (silent is bool silentBool)
+            {
+                node.SetAttribute("silent", silentBool ? "true" : "false");
+            }
+            targetElement.AppendChild(node);
+        }
+
         private static string FilterXMLTag(string data)
         {
             try
@@ -135,6 +153,18 @@ namespace WslNotifydWin.DBus
             else
             {
                 tagId = ReplacesId;
+            }
+
+            string? audioSrc = null;
+            bool? audioLoop = null;
+            bool? audioSuppress = null;
+            if (Hints.TryGetValue("suppress-sound", out var suppressObj) && suppressObj is bool suppressBool)
+            {
+                audioSuppress = suppressBool;
+            }
+            if (audioSrc != null || audioLoop != null || audioSuppress != null)
+            {
+                AddAudio(toast, audioSrc, audioLoop, audioSuppress);
             }
 
             if (Hints.TryGetValue("urgency", out var urgencyObj) && urgencyObj is byte urgency && urgency == 2)
