@@ -102,7 +102,7 @@ namespace WslNotifydWin.DBus
                 return data;
             }
         }
-
+ 
         public Task<uint> NotifyAsync(string AppName, uint ReplacesId, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout)
         {
             Console.WriteLine("app_name: {0}, replaces_id: {1}, app_icon: {2}, summary: {3}, body: {4}, actions: [{5}], hints: [{6}], expire_timeout: {7}", AppName, ReplacesId, AppIcon, Summary, Body, string.Join(", ", Actions), string.Join(", ", Hints), ExpireTimeout);
@@ -178,10 +178,10 @@ namespace WslNotifydWin.DBus
                 {
                     actionKey = eventArgs.Arguments;
                 }
-                foreach (var (k, v) in eventArgs.UserInput)
-                {
-                    Console.WriteLine("{0}: {1}", k, v);
-                }
+                // foreach (var (k, v) in eventArgs.UserInput)
+                // {
+                //     Console.WriteLine("{0}: {1}", k, v);
+                // }
             }
             OnAction?.Invoke((uint.Parse(sender.Tag), actionKey));
             OnClose?.Invoke((uint.Parse(sender.Tag), reason));
