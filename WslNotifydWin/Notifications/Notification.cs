@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
 
@@ -7,19 +8,21 @@ namespace WslNotifydWin.Notifications
 
     class Notification
     {
+        private readonly ILogger<Notification> _logger;
         private readonly ToastNotifier _notifier;
         private readonly ConcurrentDictionary<string, ToastNotification> _toastHistory = new();
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
 
-        public Notification(string aumId)
+        public Notification(string aumId, ILogger<Notification> logger)
         {
             _notifier = ToastNotificationManager.CreateToastNotifier(aumId);
+            _logger = logger;
         }
 
         public Task CloseNotificationAsync(uint Id)
         {
-            Console.WriteLine("notification {0} has been requested to close", Id);
+            _logger.LogInformation("notification {0} has been requested to close", Id);
             if (_toastHistory.TryGetValue(Id.ToString(), out var notif))
             {
                 _notifier.Hide(notif);
@@ -50,7 +53,7 @@ namespace WslNotifydWin.Notifications
             return Task.FromResult(("wsl-notifyd", "WSL", "0.0.1", "1.2"));
         }
 
-        private static void AddText(IXmlNode targetElement, string text, Dictionary<string, string>? attrs = null)
+        private void AddText(IXmlNode targetElement, string text, Dictionary<string, string>? attrs = null)
         {
             var node = targetElement.OwnerDocument.CreateElement("text");
             node.InnerText = text;
@@ -64,7 +67,7 @@ namespace WslNotifydWin.Notifications
             targetElement.AppendChild(node);
         }
 
-        private static void AddAction(IXmlNode targetElement, string actionId, string action)
+        private void AddAction(IXmlNode targetElement, string actionId, string action)
         {
             var node = targetElement.OwnerDocument.CreateElement("action");
             node.SetAttribute("content", action);
@@ -72,7 +75,7 @@ namespace WslNotifydWin.Notifications
             targetElement.AppendChild(node);
         }
 
-        private static void AddAudio(IXmlNode targetElement, string? src, bool? loop, bool? silent)
+        private void AddAudio(IXmlNode targetElement, string? src, bool? loop, bool? silent)
         {
             var node = targetElement.OwnerDocument.CreateElement("audio");
             if (src != null)
@@ -90,7 +93,7 @@ namespace WslNotifydWin.Notifications
             targetElement.AppendChild(node);
         }
 
-        private static string FilterXMLTag(string data)
+        private string FilterXMLTag(string data)
         {
             try
             {
@@ -101,14 +104,14 @@ namespace WslNotifydWin.Notifications
             }
             catch (System.Xml.XmlException ex)
             {
-                Console.WriteLine("Parse Error. fallback: {0}", ex.ToString());
+                _logger.LogInformation("Parse Error. fallback: {0}", ex.ToString());
                 return data;
             }
         }
 
         public Task<uint> NotifyAsync(string AppName, uint ReplacesId, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout, uint NotificationId)
         {
-            Console.WriteLine("app_name: {0}, replaces_id: {1}, app_icon: {2}, summary: {3}, body: {4}, actions: [{5}], hints: [{6}], expire_timeout: {7}", AppName, ReplacesId, AppIcon, Summary, Body, string.Join(", ", Actions), string.Join(", ", Hints), ExpireTimeout);
+            _logger.LogInformation("app_name: {0}, replaces_id: {1}, app_icon: {2}, summary: {3}, body: {4}, actions: [{5}], hints: [{6}], expire_timeout: {7}", AppName, ReplacesId, AppIcon, Summary, Body, string.Join(", ", Actions), string.Join(", ", Hints), ExpireTimeout);
             var content = """<toast><visual><binding template="ToastGeneric"></binding></visual></toast>""";
             var doc = new XmlDocument();
             doc.LoadXml(content);
@@ -182,7 +185,7 @@ namespace WslNotifydWin.Notifications
 
         private void HandleActivated(ToastNotification sender, object args)
         {
-            Console.WriteLine("notification {0} has been activated", sender.Tag);
+            _logger.LogInformation("notification {0} has been activated", sender.Tag);
             string actionKey = "default";
             const uint reason = 2;
             if (args is ToastActivatedEventArgs eventArgs)
@@ -193,7 +196,7 @@ namespace WslNotifydWin.Notifications
                 }
                 // foreach (var (k, v) in eventArgs.UserInput)
                 // {
-                //     Console.WriteLine("{0}: {1}", k, v);
+                //     _logger.LogInformation("{0}: {1}", k, v);
                 // }
             }
             OnAction?.Invoke((uint.Parse(sender.Tag), actionKey));
@@ -210,7 +213,7 @@ namespace WslNotifydWin.Notifications
                 ToastDismissalReason.ApplicationHidden => 3,
                 _ => 4,
             };
-            Console.WriteLine("notification {0} has been dismissed", sender.Tag);
+            _logger.LogInformation("notification {0} has been dismissed", sender.Tag);
             OnClose?.Invoke((uint.Parse(sender.Tag), reason));
             _toastHistory.Remove(sender.Tag, out _);
         }

@@ -61,7 +61,11 @@ internal class Program
                 };
             });
 
-        builder.Services.AddSingleton(new Notification(aumId));
+        builder.Services.AddSingleton(serviceProvider =>
+        {
+            var logger = serviceProvider.GetService<ILogger<Notification>>()!;
+            return new Notification(aumId, logger);
+        });
         builder.Services.AddHostedService<ActionInvokedSignalService>();
         builder.Services.AddHostedService<NotificationClosedSignalService>();
         builder.Services.AddHostedService<CloseNotificationMessageService>();
