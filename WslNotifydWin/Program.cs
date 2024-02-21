@@ -1,9 +1,11 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using GrpcNotification;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
-using WslNotifydWin.Services;
+using WslNotifydWin.Notifications;
+using WslNotifydWin.Services.Grpc;
 
 internal class Program
 {
@@ -45,12 +47,25 @@ internal class Program
             Args = args,
             Configuration = initialConfig,
         });
-        builder.Services.AddSingleton<IHostedService>(serviceProvider =>
-        {
-            var logger = serviceProvider.GetService<ILogger<DBusNotificationService>>()!;
-            var lifetime = serviceProvider.GetService<IHostApplicationLifetime>()!;
-            return new DBusNotificationService(args[0], args[1], aumId, logger, lifetime);
-        });
+        builder.Services
+            .AddGrpcClient<Notifier.NotifierClient>(options =>
+            {
+                options.Address = new Uri(args[0]);
+            })
+            .ConfigurePrimaryHttpMessageHandler(() =>
+            {
+                return new HttpClientHandler()
+                {
+                    // FIXME
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+                };
+            });
+
+        builder.Services.AddSingleton(new Notification(aumId));
+        builder.Services.AddHostedService<ActionInvokedSignalService>();
+        builder.Services.AddHostedService<NotificationClosedSignalService>();
+        builder.Services.AddHostedService<CloseNotificationMessageService>();
+        builder.Services.AddHostedService<NotifyMessageService>();
 
         var app = builder.Build();
         app.Run();

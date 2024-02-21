@@ -1,33 +1,18 @@
 using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
-using Tmds.DBus;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
 
-[assembly: InternalsVisibleTo(Tmds.DBus.Connection.DynamicAssemblyName)]
-namespace WslNotifydWin.DBus
+namespace WslNotifydWin.Notifications
 {
-    [DBusInterface("org.freedesktop.Notifications")]
-    interface INotifications : IDBusObject
-    {
-        Task<string[]> GetCapabilitiesAsync();
-        Task<uint> NotifyAsync(string AppName, uint ReplacesId, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout);
-        Task CloseNotificationAsync(uint Id);
-        Task<(string name, string vendor, string version, string specVersion)> GetServerInformationAsync();
-        Task<IDisposable> WatchNotificationClosedAsync(Action<(uint id, uint reason)> handler, Action<Exception>? onError = null);
-        Task<IDisposable> WatchActionInvokedAsync(Action<(uint id, string actionKey)> handler, Action<Exception>? onError = null);
-    }
 
-    class Notifications : INotifications
+    class Notification
     {
-        private uint _sequence = 0;
         private readonly ToastNotifier _notifier;
         private readonly ConcurrentDictionary<string, ToastNotification> _toastHistory = new();
-        public ObjectPath ObjectPath => new("/org/freedesktop/Notifications");
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
 
-        public Notifications(string aumId)
+        public Notification(string aumId)
         {
             _notifier = ToastNotificationManager.CreateToastNotifier(aumId);
         }
@@ -121,7 +106,7 @@ namespace WslNotifydWin.DBus
             }
         }
 
-        public Task<uint> NotifyAsync(string AppName, uint ReplacesId, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout)
+        public Task<uint> NotifyAsync(string AppName, uint ReplacesId, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout, uint NotificationId)
         {
             Console.WriteLine("app_name: {0}, replaces_id: {1}, app_icon: {2}, summary: {3}, body: {4}, actions: [{5}], hints: [{6}], expire_timeout: {7}", AppName, ReplacesId, AppIcon, Summary, Body, string.Join(", ", Actions), string.Join(", ", Hints), ExpireTimeout);
             var content = """<toast><visual><binding template="ToastGeneric"></binding></visual></toast>""";
@@ -147,8 +132,7 @@ namespace WslNotifydWin.DBus
             uint tagId;
             if (ReplacesId == 0)
             {
-                Interlocked.Increment(ref _sequence);
-                tagId = _sequence;
+                tagId = NotificationId;
             }
             else
             {
@@ -194,16 +178,6 @@ namespace WslNotifydWin.DBus
 
             _toastHistory[notif.Tag] = notif;
             return Task.FromResult(tagId);
-        }
-
-        public Task<IDisposable> WatchNotificationClosedAsync(Action<(uint id, uint reason)> handler, Action<Exception>? onError = null)
-        {
-            return SignalWatcher.AddAsync(this, nameof(OnClose), handler);
-        }
-
-        public Task<IDisposable> WatchActionInvokedAsync(Action<(uint id, string actionKey)> handler, Action<Exception>? onError = null)
-        {
-            return SignalWatcher.AddAsync(this, nameof(OnAction), handler);
         }
 
         private void HandleActivated(ToastNotification sender, object args)

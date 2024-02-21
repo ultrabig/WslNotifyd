@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+option csharp_namespace = "GrpcNotification";
+
+package wslnotifyd;
+
+service Notifier {
+    rpc CloseNotification (stream CloseNotificationRequest) returns (stream CloseNotificationReply);
+    rpc Notify (stream NotifyRequest) returns (stream NotifyReply);
+    rpc NotificationClosed (stream NotificationClosedRequest) returns (NotificationClosedReply);
+    rpc ActionInvoked (stream ActionInvokedRequest) returns (ActionInvokedReply);
+}
+
+message CloseNotificationRequest {
+    uint32 serial_id = 1;
+    bool success = 2;
+    ClientError error = 3;
+}
+
+message CloseNotificationReply {
+    uint32 notification_id = 1;
+    uint32 serial_id = 2;
+}
+
+message NotifyRequest {
+    uint32 serial_id = 1;
+    bool success = 2;
+    ClientError error = 3;
+    uint32 notification_id = 4;
+}
+
+message NotifyReply {
+    string app_name = 1;
+    uint32 replaces_id = 2;
+    string app_icon = 3;
+    string summary = 4;
+    string body = 5;
+    repeated string actions = 6;
+    map<string, NotificationHintVariant> hints = 7;
+    int32 expire_timeout = 8;
+    uint32 notification_id = 9;
+    uint32 serial_id = 10;
+}
+
+message NotificationHintVariant {
+    oneof val {
+        int32 byte_val = 1;
+        bool bool_val = 2;
+        int32 short_val = 3;
+        uint32 ushort_val = 4;
+        int32 int_val = 5;
+        uint32 uint_val = 6;
+        int64 long_val = 7;
+        uint64 ulong_val = 8;
+        float float_val = 9;
+        double double_val = 10;
+        string string_val = 11;
+        bytes bytes_val = 12;
+    }
+}
+
+message NotificationClosedRequest {
+    uint32 notification_id = 1;
+    uint32 reason = 2;
+}
+
+message NotificationClosedReply { 
+}
+
+message ActionInvokedRequest {
+    uint32 notification_id = 1;
+    string action_key = 2;
+}
+
+message ActionInvokedReply {
+}
+
+message ClientError {
+    string error_message = 1;
+}
