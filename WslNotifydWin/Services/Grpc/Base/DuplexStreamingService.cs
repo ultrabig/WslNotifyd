@@ -14,6 +14,7 @@ namespace WslNotifydWin.Services.Grpc.Base
         protected AsyncDuplexStreamingCall<TRequest, TResponse>? streamingCall;
         protected uint serialId = 0;
         private Task? _readingTask;
+        private CancellationTokenSource? _cts;
 
         public DuplexStreamingService(
             ILogger<DuplexStreamingService<TRequest, TResponse>> logger,
@@ -34,27 +35,31 @@ namespace WslNotifydWin.Services.Grpc.Base
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             streamingCall = await CreateStreamingCallAsync(cancellationToken);
-
+            _cts = new CancellationTokenSource();
             _readingTask = Task.Run(async () =>
             {
-                await foreach (var response in streamingCall.ResponseStream.ReadAllAsync())
+                await foreach (var response in streamingCall.ResponseStream.ReadAllAsync(_cts.Token))
                 {
                     try
                     {
-                        var req = await HandleResponseAsync(response, cancellationToken);
+                        var req = await HandleResponseAsync(response, _cts.Token);
                         await streamingCall.RequestStream.WriteAsync(req);
                     }
                     catch (Exception ex)
                     {
-                        var req = await HandleErrorAsync(response, ex, cancellationToken);
+                        var req = await HandleErrorAsync(response, ex, _cts.Token);
                         await streamingCall.RequestStream.WriteAsync(req);
                     }
                 }
-            });
+            }, cancellationToken);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            if (_cts != null)
+            {
+                _cts.Cancel();
+            }
             if (streamingCall != null)
             {
                 await streamingCall.RequestStream.CompleteAsync();
@@ -67,6 +72,11 @@ namespace WslNotifydWin.Services.Grpc.Base
 
         public ValueTask DisposeAsync()
         {
+            if (_cts != null)
+            {
+                _cts.Dispose();
+                _cts = null;
+            }
             if (streamingCall != null)
             {
                 streamingCall.Dispose();

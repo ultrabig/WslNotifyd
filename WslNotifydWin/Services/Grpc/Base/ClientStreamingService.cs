@@ -12,6 +12,7 @@ namespace WslNotifydWin.Services.Grpc.Base
         protected readonly Notifier.NotifierClient client;
         protected readonly Notification notif;
         protected AsyncClientStreamingCall<TRequest, TResponse>? streamingCall;
+        private CancellationTokenSource? _cts = null;
 
         public ClientStreamingService(
             ILogger<ClientStreamingService<TRequest, TResponse>> logger,
@@ -25,19 +26,24 @@ namespace WslNotifydWin.Services.Grpc.Base
 
         protected abstract Task<AsyncClientStreamingCall<TRequest, TResponse>> CreateStreamingCallAsync(CancellationToken cancellationToken);
 
-        protected abstract Task RegisterEventHandlerAsync(CancellationToken cancellationToken);
+        protected abstract Task RegisterEventHandlerAsync();
 
-        protected abstract Task UnregisterEventHandlerAsync(CancellationToken cancellationToken);
+        protected abstract Task UnregisterEventHandlerAsync();
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            streamingCall = await CreateStreamingCallAsync(cancellationToken);
-            await RegisterEventHandlerAsync(cancellationToken);
+            _cts = new CancellationTokenSource();
+            streamingCall = await CreateStreamingCallAsync(_cts.Token);
+            await RegisterEventHandlerAsync();
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            await UnregisterEventHandlerAsync(cancellationToken);
+            await UnregisterEventHandlerAsync();
+            if (_cts != null)
+            {
+                _cts.Cancel();
+            }
             if (streamingCall != null)
             {
                 await streamingCall.RequestStream.CompleteAsync();

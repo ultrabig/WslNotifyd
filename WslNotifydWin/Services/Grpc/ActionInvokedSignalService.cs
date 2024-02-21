@@ -14,16 +14,16 @@ namespace WslNotifydWin.Services.Grpc
 
         protected override Task<AsyncClientStreamingCall<ActionInvokedRequest, ActionInvokedReply>> CreateStreamingCallAsync(CancellationToken cancellationToken)
         {
-            return Task.FromResult(client.ActionInvoked());
+            return Task.FromResult(client.ActionInvoked(cancellationToken: cancellationToken));
         }
 
-        protected override Task RegisterEventHandlerAsync(CancellationToken cancellationToken)
+        protected override Task RegisterEventHandlerAsync()
         {
             notif.OnAction += HandleClose;
             return Task.CompletedTask;
         }
 
-        protected override Task UnregisterEventHandlerAsync(CancellationToken cancellationToken)
+        protected override Task UnregisterEventHandlerAsync()
         {
             notif.OnAction -= HandleClose;
             return Task.CompletedTask;
