@@ -1,4 +1,6 @@
-﻿using GrpcNotification;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using GrpcNotification;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,6 +31,19 @@ internal class Program
         }
     }
 
+    private static (X509Certificate2, X509Certificate2) ReadCertificate()
+    {
+        using var stdin = Console.OpenStandardInput();
+        using var ms = new MemoryStream();
+        stdin.CopyTo(ms);
+        stdin.Close();
+        var data = ms.ToArray();
+        var msg = CertificateMessage.Parser.ParseFrom(data);
+        var serverCert = new X509Certificate2(msg.ServerCertificate.ToArray());
+        var clientCert = new X509Certificate2(msg.ClientCertificate.ToArray());
+        return (serverCert, clientCert);
+    }
+
     private static void Main(string[] args)
     {
         var aumId = "WslNotifyd-aumid";
@@ -47,6 +62,8 @@ internal class Program
             Args = args,
             Configuration = initialConfig,
         });
+        // builder.Logging.SetMinimumLevel(LogLevel.Trace);
+        (var serverCert, var clientCert) = ReadCertificate();
         builder.Services
             .AddGrpcClient<Notifier.NotifierClient>(options =>
             {
@@ -56,8 +73,32 @@ internal class Program
             {
                 return new HttpClientHandler()
                 {
-                    // FIXME
-                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+                    ClientCertificates = {
+                        // clientCert should have private key
+                        clientCert,
+                    },
+                    CheckCertificateRevocationList = false,
+                    ClientCertificateOptions = ClientCertificateOption.Manual,
+                    ServerCertificateCustomValidationCallback = (req, cert, chain, errors) =>
+                    {
+                        if (errors == SslPolicyErrors.None)
+                        {
+                            return true;
+                        }
+                        if (cert == null)
+                        {
+                            return false;
+                        }
+                        Console.WriteLine("errors: {0}", errors);
+                        Console.WriteLine("server presented: {0}", cert.Thumbprint);
+                        if (cert.Thumbprint == serverCert.Thumbprint)
+                        {
+                            Console.WriteLine("client check success");
+                            return true;
+                        }
+                        return false;
+                    },
+                    SslProtocols = System.Security.Authentication.SslProtocols.Tls12,
                 };
             });
 

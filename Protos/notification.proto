@@ -78,3 +78,8 @@ message ActionInvokedReply {
 message ClientError {
     string error_message = 1;
 }
+
+message CertificateMessage {
+    bytes server_certificate = 1;
+    bytes client_certificate = 2;
+}

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace WslNotifyd.Services
 {
-    public class ProcessService(ILogger<ProcessService> logger, ProcessStartInfo psi, IHostApplicationLifetime lifetime) : IHostedService, IAsyncDisposable
+    public class ProcessService(ILogger<ProcessService> logger, ProcessStartInfo psi, IHostApplicationLifetime lifetime, byte[]? stdin = null) : IHostedService, IAsyncDisposable
     {
         Process? _proc = null;
 
@@ -25,8 +25,15 @@ namespace WslNotifyd.Services
                     _proc.ErrorDataReceived += HandleErrorReceived;
                     _proc.BeginErrorReadLine();
                 }
-                _proc.StandardInput.Close();
-                _proc.StandardInput.Dispose();
+                if (psi.RedirectStandardInput)
+                {
+                    if (stdin != null)
+                    {
+                        _proc.StandardInput.BaseStream.Write(stdin);
+                    }
+                    _proc.StandardInput.Close();
+                    _proc.StandardInput.Dispose();
+                }
             }
             return Task.CompletedTask;
         }

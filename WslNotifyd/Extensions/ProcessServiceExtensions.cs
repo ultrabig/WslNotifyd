@@ -8,7 +8,7 @@ namespace WslNotifyd.Extensions
 {
     public static class ProcessServiceExtensions
     {
-        public static IServiceCollection AddProcessService(this IServiceCollection services, ProcessStartInfo psi)
+        public static IServiceCollection AddProcessService(this IServiceCollection services, ProcessStartInfo psi, byte[]? stdin = null)
         {
             // https://github.com/dotnet/runtime/issues/38751#issuecomment-1158350910
             // <IHostedService> is required for StartAsync to be called
@@ -16,7 +16,7 @@ namespace WslNotifyd.Extensions
             {
                 var logger = serviceProvider.GetService<ILogger<ProcessService>>()!;
                 var lifetime = serviceProvider.GetService<IHostApplicationLifetime>()!;
-                return new ProcessService(logger, psi, lifetime);
+                return new ProcessService(logger, psi, lifetime, stdin);
             });
             return services;
         }
