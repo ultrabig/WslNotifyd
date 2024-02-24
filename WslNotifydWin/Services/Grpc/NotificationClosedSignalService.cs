@@ -7,9 +7,9 @@ using WslNotifydWin.Services.Grpc.Base;
 
 namespace WslNotifydWin.Services.Grpc
 {
-    class NotificationClosedSignalService : ClientStreamingService<NotificationClosedRequest, NotificationClosedReply>
+    class NotificationClosedSignalService : ClientStreamingService<NotificationClosedRequest, NotificationClosedReply, NotificationClosedSignalService>
     {
-        public NotificationClosedSignalService(ILogger<ClientStreamingService<NotificationClosedRequest, NotificationClosedReply>> logger, Notifier.NotifierClient notifierClient, Notification notification) : base(logger, notifierClient, notification)
+        public NotificationClosedSignalService(ILogger<NotificationClosedSignalService> logger, Notifier.NotifierClient notifierClient, Notification notification) : base(logger, notifierClient, notification)
         {
         }
 

@@ -6,16 +6,16 @@ using WslNotifydWin.Notifications;
 
 namespace WslNotifydWin.Services.Grpc.Base
 {
-    abstract class ClientStreamingService<TRequest, TResponse> : IHostedService, IAsyncDisposable
+    abstract class ClientStreamingService<TRequest, TResponse, TService> : IHostedService, IAsyncDisposable
     {
-        protected readonly ILogger<ClientStreamingService<TRequest, TResponse>> logger;
+        protected readonly ILogger<TService> logger;
         protected readonly Notifier.NotifierClient client;
         protected readonly Notification notif;
         protected AsyncClientStreamingCall<TRequest, TResponse>? streamingCall;
         private CancellationTokenSource? _cts = null;
 
         public ClientStreamingService(
-            ILogger<ClientStreamingService<TRequest, TResponse>> logger,
+            ILogger<TService> logger,
             Notifier.NotifierClient notifierClient,
             Notification notification)
         {

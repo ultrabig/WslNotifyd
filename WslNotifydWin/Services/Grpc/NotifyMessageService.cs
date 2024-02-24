@@ -6,9 +6,9 @@ using WslNotifydWin.Services.Grpc.Base;
 
 namespace WslNotifydWin.Services.Grpc
 {
-    class NotifyMessageService : DuplexStreamingService<NotifyRequest, NotifyReply>
+    class NotifyMessageService : DuplexStreamingService<NotifyRequest, NotifyReply, NotifyMessageService>
     {
-        public NotifyMessageService(ILogger<DuplexStreamingService<NotifyRequest, NotifyReply>> logger, Notifier.NotifierClient notifierClient, Notification notification) : base(logger, notifierClient, notification)
+        public NotifyMessageService(ILogger<NotifyMessageService> logger, Notifier.NotifierClient notifierClient, Notification notification) : base(logger, notifierClient, notification)
         {
         }
 

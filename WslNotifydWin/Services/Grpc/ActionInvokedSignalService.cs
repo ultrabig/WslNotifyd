@@ -6,9 +6,9 @@ using WslNotifydWin.Services.Grpc.Base;
 
 namespace WslNotifydWin.Services.Grpc
 {
-    class ActionInvokedSignalService : ClientStreamingService<ActionInvokedRequest, ActionInvokedReply>
+    class ActionInvokedSignalService : ClientStreamingService<ActionInvokedRequest, ActionInvokedReply, ActionInvokedSignalService>
     {
-        public ActionInvokedSignalService(ILogger<ClientStreamingService<ActionInvokedRequest, ActionInvokedReply>> logger, Notifier.NotifierClient notifierClient, Notification notification) : base(logger, notifierClient, notification)
+        public ActionInvokedSignalService(ILogger<ActionInvokedSignalService> logger, Notifier.NotifierClient notifierClient, Notification notification) : base(logger, notifierClient, notification)
         {
         }
 

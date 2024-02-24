@@ -6,9 +6,9 @@ using WslNotifydWin.Notifications;
 
 namespace WslNotifydWin.Services.Grpc.Base
 {
-    abstract class DuplexStreamingService<TRequest, TResponse> : IHostedService, IAsyncDisposable
+    abstract class DuplexStreamingService<TRequest, TResponse, TService> : IHostedService, IAsyncDisposable
     {
-        protected readonly ILogger<DuplexStreamingService<TRequest, TResponse>> logger;
+        protected readonly ILogger<TService> logger;
         protected readonly Notifier.NotifierClient client;
         protected readonly Notification notif;
         protected AsyncDuplexStreamingCall<TRequest, TResponse>? streamingCall;
@@ -17,7 +17,7 @@ namespace WslNotifydWin.Services.Grpc.Base
         private CancellationTokenSource? _cts;
 
         public DuplexStreamingService(
-            ILogger<DuplexStreamingService<TRequest, TResponse>> logger,
+            ILogger<TService> logger,
             Notifier.NotifierClient notifierClient,
             Notification notification)
         {
