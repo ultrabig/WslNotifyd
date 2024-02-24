@@ -14,8 +14,8 @@ namespace WslNotifyd.Extensions
             // <IHostedService> is required for StartAsync to be called
             services.AddSingleton<IHostedService>(serviceProvider =>
             {
-                var logger = serviceProvider.GetService<ILogger<ProcessService>>()!;
-                var lifetime = serviceProvider.GetService<IHostApplicationLifetime>()!;
+                var logger = serviceProvider.GetRequiredService<ILogger<ProcessService>>();
+                var lifetime = serviceProvider.GetRequiredService<IHostApplicationLifetime>();
                 return new ProcessService(logger, psi, lifetime, stdin);
             });
             return services;

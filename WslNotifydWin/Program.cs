@@ -1,4 +1,4 @@
-using System.Net.Security;
+﻿using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using GrpcNotification;
 using Microsoft.Extensions.Configuration;
@@ -104,13 +104,13 @@ internal class Program
 
         builder.Services.AddSingleton(serviceProvider =>
         {
-            var logger = serviceProvider.GetService<ILogger<Notification>>()!;
+            var logger = serviceProvider.GetRequiredService<ILogger<Notification>>();
             return new Notification(aumId, logger);
         });
-        builder.Services.AddHostedService<ActionInvokedSignalService>();
-        builder.Services.AddHostedService<NotificationClosedSignalService>();
-        builder.Services.AddHostedService<CloseNotificationMessageService>();
-        builder.Services.AddHostedService<NotifyMessageService>();
+        builder.Services.AddSingleton<IHostedService, ActionInvokedSignalService>();
+        builder.Services.AddSingleton<IHostedService, NotificationClosedSignalService>();
+        builder.Services.AddSingleton<IHostedService, CloseNotificationMessageService>();
+        builder.Services.AddSingleton<IHostedService, NotifyMessageService>();
 
         var app = builder.Build();
         app.Run();
