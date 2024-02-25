@@ -48,7 +48,7 @@ internal class Program
 
     private static void Main(string[] args)
     {
-        var listenAddress = "https://127.0.0.1:12345";
+        var listenAddress = "https://127.0.0.1:52394";
         (var serverCert, var clientCert) = CreateCerts();
         Console.WriteLine("Server Cert: {0}, Client Cert: {1}", serverCert.Thumbprint, clientCert.Thumbprint);
         Console.WriteLine("Server Serial: {0}, Client Serial: {1}", serverCert.SerialNumber, clientCert.SerialNumber);
