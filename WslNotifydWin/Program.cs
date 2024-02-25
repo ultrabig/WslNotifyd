@@ -46,7 +46,7 @@ internal class Program
 
     private static void Main(string[] args)
     {
-        var aumId = "WslNotifyd-aumid";
+        var aumId = "WslNotifyd";
         SetupRegistry(aumId);
 
         var initialConfig = new ConfigurationManager();
