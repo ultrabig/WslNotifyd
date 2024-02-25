@@ -59,6 +59,8 @@ internal class Program
             ServerCertificate = ByteString.CopyFrom(serverCert.Export(X509ContentType.Cert)),
             ClientCertificate = ByteString.CopyFrom(clientCert.Export(X509ContentType.Pfx)),
         };
+        clientCert.Dispose();
+        clientCert = null;
         builder.Services.AddProcessService(new ProcessStartInfo(Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "../../../../WslNotifydWin/scripts/runner.sh"))
         {
             UseShellExecute = false,
@@ -71,6 +73,7 @@ internal class Program
             RedirectStandardError = false,
             CreateNoWindow = true,
         }, msg.ToByteArray());
+        msg = null;
         builder.Services.AddGrpc();
         builder.Services.AddSingleton<IHostedService, DBusNotificationService>();
         builder.Services.AddSingleton(new Notifications());
