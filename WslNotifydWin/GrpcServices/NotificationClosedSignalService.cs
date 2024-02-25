@@ -2,10 +2,10 @@ using Grpc.Core;
 using GrpcNotification;
 using Microsoft.Extensions.Logging;
 using WslNotifydWin.Notifications;
-using WslNotifydWin.Services.Grpc.Base;
+using WslNotifydWin.GrpcServices.Base;
 
 
-namespace WslNotifydWin.Services.Grpc
+namespace WslNotifydWin.GrpcServices
 {
     class NotificationClosedSignalService : ClientStreamingService<NotificationClosedRequest, NotificationClosedReply, NotificationClosedSignalService>
     {

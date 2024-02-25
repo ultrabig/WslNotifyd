@@ -4,7 +4,7 @@ using GrpcNotification;
 using Microsoft.Extensions.Logging;
 using WslNotifyd.DBus;
 
-namespace WslNotifyd.Services
+namespace WslNotifyd.GrpcServices
 {
     internal class NotifierService : Notifier.NotifierBase
     {

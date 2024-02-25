@@ -7,7 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using WslNotifydWin.Notifications;
-using WslNotifydWin.Services.Grpc;
+using WslNotifydWin.GrpcServices;
 
 internal class Program
 {

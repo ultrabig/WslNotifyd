@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using WslNotifyd.DBus;
 using WslNotifyd.Extensions;
+using WslNotifyd.GrpcServices;
 using WslNotifyd.Services;
 
 internal class Program

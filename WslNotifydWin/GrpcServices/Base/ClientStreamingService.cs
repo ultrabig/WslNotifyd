@@ -4,7 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using WslNotifydWin.Notifications;
 
-namespace WslNotifydWin.Services.Grpc.Base
+namespace WslNotifydWin.GrpcServices.Base
 {
     abstract class ClientStreamingService<TRequest, TResponse, TService> : IHostedService, IAsyncDisposable
     {
