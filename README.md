@@ -3,7 +3,7 @@
 WslNotifyd is an implementation of the [Desktop Notifications Specification](https://specifications.freedesktop.org/notification-spec/notification-spec-latest.html) using Windows native functionality.
 
 ## Requirements
-
+- WSL2 (WSL1 is not confirmed to work)
 - [WSL2 settings](https://learn.microsoft.com/en-us/windows/wsl/wsl-config) (These settings are all enabled by default)
   - systemd enabled
   - localhostForwarding enabled
