@@ -62,10 +62,17 @@ internal class Program
         };
         clientCert.Dispose();
         clientCert = null;
-        builder.Services.AddProcessService(new ProcessStartInfo(Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "../../../../WslNotifydWin/scripts/runner.sh"))
+#if DEBUG
+        var notifydWinPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "../../../../WslNotifydWin/scripts/runner.sh");
+        var workingDirectory = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "../../../../WslNotifydWin");
+#else
+        var notifydWinPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "WslNotifydWin/WslNotifydWin.exe");
+        var workingDirectory = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "WslNotifydWin");
+#endif
+        builder.Services.AddProcessService(new ProcessStartInfo(notifydWinPath)
         {
             UseShellExecute = false,
-            WorkingDirectory = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "../../../../WslNotifydWin"),
+            WorkingDirectory = workingDirectory,
             ArgumentList = {
                 listenAddress,
             },
