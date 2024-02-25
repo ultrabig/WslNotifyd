@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.60.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Certificate" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Tmds.DBus" Version="0.16.0" />
   </ItemGroup>
