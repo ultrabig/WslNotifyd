@@ -89,8 +89,6 @@ internal class Program
                         {
                             return false;
                         }
-                        Console.WriteLine("errors: {0}", errors);
-                        Console.WriteLine("server presented: {0}", cert.Thumbprint);
                         chain ??= new X509Chain();
                         chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
                         chain.ChainPolicy.CustomTrustStore.Add(serverCert);

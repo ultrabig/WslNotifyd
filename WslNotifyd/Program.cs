@@ -50,8 +50,6 @@ internal class Program
     {
         var listenAddress = "https://127.0.0.1:52394";
         (var serverCert, var clientCert) = CreateCerts();
-        Console.WriteLine("Server Cert: {0}, Client Cert: {1}", serverCert.Thumbprint, clientCert.Thumbprint);
-        Console.WriteLine("Server Serial: {0}, Client Serial: {1}", serverCert.SerialNumber, clientCert.SerialNumber);
         var builder = WebApplication.CreateBuilder(args);
         // builder.Logging.SetMinimumLevel(LogLevel.Trace);
 
@@ -96,8 +94,6 @@ internal class Program
                     {
                         return true;
                     }
-                    Console.WriteLine("errors: {0}", errors);
-                    Console.WriteLine("client presented: {0}", cert.Thumbprint);
                     chain ??= new X509Chain();
                     chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
                     chain.ChainPolicy.CustomTrustStore.Add(serverCert);
