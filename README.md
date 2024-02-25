@@ -11,7 +11,7 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
 
 ## Usage
 
-1. [Install .NET sdk](https://learn.microsoft.com/en-us/dotnet/core/install/linux)
+1. [Install .NET sdk](https://learn.microsoft.com/en-us/dotnet/core/install/linux) on WSL2
 2. Clone the repo
   ```sh
   git clone https://github.com/ultrabig/WslNotifyd.git
