@@ -173,6 +173,7 @@ namespace WslNotifyd.DBus
                 toast.SetAttribute("scenario", "urgent");
             }
 
+            // TODO: 5 is configurable on Windows
             if (ExpireTimeout > 0 && ExpireTimeout <= 5)
             {
                 toast.SetAttribute("duration", "short");
