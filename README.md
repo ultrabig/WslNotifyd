@@ -54,14 +54,15 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
 
 - Custom icons and images
 - Custom sounds
-
+- systemd D-Bus activation
 ## Uninstall
 
 1. Remove out dir
 2. Delete registry key `HKCU\Software\Classes\AppUserModelId\WslNotifyd`
+  ```sh
+  reg.exe delete 'HKCU\Software\Classes\AppUserModelId\WslNotifyd'
   ```
-  reg.exe delete HKCU\Software\Classes\AppUserModelId\WslNotifyd
-  ```
+  Remove quotes when you want to use cmd.exe
 ## Limitations
 
 - Markup is not supported
