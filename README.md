@@ -12,6 +12,7 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
 ## Usage
 
 1. [Install .NET sdk](https://learn.microsoft.com/en-us/dotnet/core/install/linux) on WSL2
+  - .NET 8 is confirmed to work
 2. Clone the repo
   ```sh
   git clone https://github.com/ultrabig/WslNotifyd.git
@@ -57,8 +58,8 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
 - systemd D-Bus activation
 ## Uninstall
 
-1. Remove out dir
-2. Delete registry key `HKCU\Software\Classes\AppUserModelId\WslNotifyd`
+1. Remove `out` directory
+2. Delete the registry key `HKCU\Software\Classes\AppUserModelId\WslNotifyd`
   ```sh
   reg.exe delete 'HKCU\Software\Classes\AppUserModelId\WslNotifyd'
   ```
