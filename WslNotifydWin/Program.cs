@@ -91,12 +91,12 @@ internal class Program
                         }
                         Console.WriteLine("errors: {0}", errors);
                         Console.WriteLine("server presented: {0}", cert.Thumbprint);
-                        if (cert.Thumbprint == serverCert.Thumbprint)
-                        {
-                            Console.WriteLine("client check success");
-                            return true;
-                        }
-                        return false;
+                        chain ??= new X509Chain();
+                        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                        chain.ChainPolicy.CustomTrustStore.Add(serverCert);
+                        var result = chain.Build(clientCert);
+                        Console.WriteLine("client check: {0}", result);
+                        return result;
                     },
                     SslProtocols = System.Security.Authentication.SslProtocols.Tls12,
                 };
