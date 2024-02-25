@@ -30,33 +30,9 @@ message NotifyRequest {
 }
 
 message NotifyReply {
-    string app_name = 1;
-    uint32 replaces_id = 2;
-    string app_icon = 3;
-    string summary = 4;
-    string body = 5;
-    repeated string actions = 6;
-    map<string, NotificationHintVariant> hints = 7;
-    int32 expire_timeout = 8;
-    uint32 notification_id = 9;
-    uint32 serial_id = 10;
-}
-
-message NotificationHintVariant {
-    oneof val {
-        int32 byte_val = 1;
-        bool bool_val = 2;
-        int32 short_val = 3;
-        uint32 ushort_val = 4;
-        int32 int_val = 5;
-        uint32 uint_val = 6;
-        int64 long_val = 7;
-        uint64 ulong_val = 8;
-        float float_val = 9;
-        double double_val = 10;
-        string string_val = 11;
-        bytes bytes_val = 12;
-    }
+    string notification_xml = 1;
+    uint32 notification_id = 2;
+    uint32 serial_id = 3;
 }
 
 message NotificationClosedRequest {

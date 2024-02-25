@@ -75,103 +75,10 @@ namespace WslNotifyd.GrpcServices
                 Interlocked.Increment(ref _notifySerial);
                 var reply = new NotifyReply()
                 {
-                    AppName = args.AppName,
-                    ReplacesId = args.ReplacesId,
-                    AppIcon = args.AppIcon,
-                    Summary = args.Summary,
-                    Body = args.Body,
-                    ExpireTimeout = args.ExpireTimeout,
+                    NotificationXml = args.NotificationXml,
                     NotificationId = args.NotificationId,
                     SerialId = serial,
                 };
-                reply.Actions.AddRange(args.Actions);
-                foreach (var (k, v) in args.Hints)
-                {
-                    if (v is byte v1)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            ByteVal = v1,
-                        });
-                    }
-                    else if (v is bool v2)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            BoolVal = v2,
-                        });
-                    }
-                    else if (v is short v3)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            ShortVal = v3,
-                        });
-                    }
-                    else if (v is ushort v4)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            UshortVal = v4,
-                        });
-                    }
-                    else if (v is int v5)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            IntVal = v5,
-                        });
-                    }
-                    else if (v is uint v6)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            UintVal = v6,
-                        });
-                    }
-                    else if (v is long v7)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            LongVal = v7,
-                        });
-                    }
-                    else if (v is ulong v8)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            UlongVal = v8,
-                        });
-                    }
-                    else if (v is float v9)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            FloatVal = v9,
-                        });
-                    }
-                    else if (v is double v10)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            DoubleVal = v10,
-                        });
-                    }
-                    else if (v is string v11)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            StringVal = v11,
-                        });
-                    }
-                    else if (v is byte[] v12)
-                    {
-                        reply.Hints.Add(k, new NotificationHintVariant()
-                        {
-                            BytesVal = ByteString.CopyFrom(v12),
-                        });
-                    }
-                }
                 var tcs = new TaskCompletionSource<uint>();
                 void handler(NotifyRequest req)
                 {

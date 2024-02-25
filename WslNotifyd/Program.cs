@@ -77,7 +77,7 @@ internal class Program
         msg = null;
         builder.Services.AddGrpc();
         builder.Services.AddSingleton<IHostedService, DBusNotificationService>();
-        builder.Services.AddSingleton(new Notifications());
+        builder.Services.AddSingleton<Notifications>();
         builder.Services.Configure<KestrelServerOptions>(kestrelOptions =>
         {
             kestrelOptions.ConfigureHttpsDefaults(httpsOptions =>
