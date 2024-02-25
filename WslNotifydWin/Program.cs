@@ -74,7 +74,7 @@ internal class Program
                 return new HttpClientHandler()
                 {
                     ClientCertificates = {
-                        // clientCert should have private key
+                        // clientCert should have a private key
                         clientCert,
                     },
                     CheckCertificateRevocationList = false,
