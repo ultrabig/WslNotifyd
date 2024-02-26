@@ -51,7 +51,6 @@ internal class Program
         var listenAddress = "https://127.0.0.1:52394";
         (var serverCert, var clientCert) = CreateCerts();
         var builder = WebApplication.CreateBuilder(args);
-        // builder.Logging.SetMinimumLevel(LogLevel.Trace);
 
         var msg = new CertificateMessage()
         {
@@ -87,6 +86,7 @@ internal class Program
         {
             kestrelOptions.ConfigureHttpsDefaults(httpsOptions =>
             {
+                var logger = kestrelOptions.ApplicationServices.GetRequiredService<ILogger<Program>>(); // TODO: better category
                 httpsOptions.ClientCertificateMode = ClientCertificateMode.RequireCertificate;
                 httpsOptions.ClientCertificateValidation = (cert, chain, errors) =>
                 {
@@ -98,7 +98,7 @@ internal class Program
                     chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
                     chain.ChainPolicy.CustomTrustStore.Add(serverCert);
                     var result = chain.Build(cert);
-                    Console.WriteLine("server check: {0}", result);
+                    logger.LogDebug("server check: {0}", result);
                     return result;
                 };
                 httpsOptions.ServerCertificate = serverCert;

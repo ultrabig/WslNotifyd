@@ -62,15 +62,15 @@ internal class Program
             Args = args,
             Configuration = initialConfig,
         });
-        // builder.Logging.SetMinimumLevel(LogLevel.Trace);
         (var serverCert, var clientCert) = ReadCertificate();
         builder.Services
             .AddGrpcClient<Notifier.NotifierClient>(options =>
             {
                 options.Address = new Uri(args[0]);
             })
-            .ConfigurePrimaryHttpMessageHandler(() =>
+            .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
             {
+                var logger = serviceProvider.GetRequiredService<ILogger<Program>>(); // TODO: better category
                 return new HttpClientHandler()
                 {
                     ClientCertificates = {
@@ -93,7 +93,7 @@ internal class Program
                         chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
                         chain.ChainPolicy.CustomTrustStore.Add(serverCert);
                         var result = chain.Build(clientCert);
-                        Console.WriteLine("client check: {0}", result);
+                        logger.LogDebug("client check: {0}", result);
                         return result;
                     },
                     SslProtocols = System.Security.Authentication.SslProtocols.Tls12,
