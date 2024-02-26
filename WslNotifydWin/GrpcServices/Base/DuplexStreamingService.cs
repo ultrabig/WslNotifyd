@@ -6,7 +6,7 @@ using WslNotifydWin.Notifications;
 
 namespace WslNotifydWin.GrpcServices.Base
 {
-    abstract class DuplexStreamingService<TRequest, TResponse, TService> : IHostedService, IAsyncDisposable
+    abstract class DuplexStreamingService<TRequest, TResponse, TService> : IHostedService, IAsyncDisposable where TRequest : class
     {
         protected readonly ILogger<TService> logger;
         protected readonly Notifier.NotifierClient client;
@@ -40,14 +40,18 @@ namespace WslNotifydWin.GrpcServices.Base
             {
                 await foreach (var response in streamingCall.ResponseStream.ReadAllAsync(_cts.Token))
                 {
+                    TRequest? req = null;
                     try
                     {
-                        var req = await HandleResponseAsync(response, _cts.Token);
-                        await streamingCall.RequestStream.WriteAsync(req);
+                        req = await HandleResponseAsync(response, _cts.Token);
                     }
                     catch (Exception ex)
                     {
-                        var req = await HandleErrorAsync(response, ex, _cts.Token);
+                        var errorReq = await HandleErrorAsync(response, ex, _cts.Token);
+                        await streamingCall.RequestStream.WriteAsync(errorReq);
+                    }
+                    if (req != null)
+                    {
                         await streamingCall.RequestStream.WriteAsync(req);
                     }
                 }
