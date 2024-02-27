@@ -5,66 +5,94 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
 ## Requirements
 - WSL2 (WSL1 is not confirmed to work)
 - [WSL2 settings](https://learn.microsoft.com/en-us/windows/wsl/wsl-config) (These settings are all enabled by default)
-  - [systemd](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#systemd-support) enabled
-  - [localhostForwarding](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#main-wsl-settings) enabled
-  - [Windows interop](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#interop-settings) enabled
+    - [systemd](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#systemd-support) enabled
+    - [localhostForwarding](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#main-wsl-settings) enabled
+    - [Windows interop](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#interop-settings) enabled
 - can connect D-Bus user session (check `$DBUS_SESSION_BUS_ADDRESS`)
 
 ## Usage
 
 1. [Install .NET sdk](https://learn.microsoft.com/en-us/dotnet/core/install/linux) on WSL2
-  - .NET 8 is confirmed to work
+    - .NET 8 is confirmed to work
 2. Clone the repo
-  ```sh
-  git clone https://github.com/ultrabig/WslNotifyd.git
-  ```
+    ```sh
+    git clone https://github.com/ultrabig/WslNotifyd.git
+    ```
 3. Build the app
-  ```sh
-  dotnet publish WslNotifyd -o out && dotnet publish WslNotifydWin --runtime win-x64 -o out/WslNotifydWin --self-contained
-  ```
+    ```sh
+    dotnet publish WslNotifyd -o out && dotnet publish WslNotifydWin --runtime win-x64 -o out/WslNotifydWin --self-contained
+    ```
 4. Run the app
-  ```sh
-  ./out/WslNotifyd
-  ```
+    ```sh
+    ./out/WslNotifyd
+    ```
 5. Send notifications from any app!
-  ```sh
-  notify-send 'It works!'
-  ```
+    ```sh
+    notify-send 'It works!'
+    ```
 
 ## Supported features
 
 - Wait dismiss/action
-  ```sh
-  notify-send -w foo
-  ```
+    ```sh
+    notify-send -w foo
+    ```
 - Actions
-  ```sh
-  notify-send -w -A action1=aaa foo
-  ```
+    ```sh
+    notify-send -w -A action1=aaa foo
+    ```
 - Urgency (critical only)
-  ```sh
-  notify-send -u critical foo
-  ```
+    ```sh
+    notify-send -u critical foo
+    ```
 - Replace existing notifications
-  ```sh
-  $ notify-send -p foo
-  1
-  $ notify-send -r 1 bar
-  ```
+    ```sh
+    $ notify-send -p foo
+    1
+    $ notify-send -r 1 bar
+    ```
+
+## Integration with systemd/D-Bus
+
+1. [Build the app](#usage) first
+2. Run the installer script
+    ```sh
+    ./install.sh
+    ```
+    - This script installs following files into `~/.local`
+        - D-Bus session service file
+            - `~/.local/share/dbus-1/services/org.freedesktop.Notifications.service`
+        - systemd user unit service file
+            - `~/.local/share/systemd/user/WslNotifyd.service`
+        - WslNotifyd
+            - `~/.local/lib/WslNotifyd`
+3. Sending notification automatically runs WslNotifyd by systemd/D-Bus
+    ```sh
+    notify-send foo
+    ```
+4. Use `systemd` command to stop WslNotifyd
+    ```sh
+    systemctl --user stop WslNotifyd
+    ```
 
 ## Todo
 
 - Custom icons and images
 - Custom sounds
-- systemd D-Bus activation
+
 ## Uninstall
 
 1. Remove `out` directory
+    - If you used `install.sh`, then remove following files/dirs
+        - `~/.local/share/dbus-1/services/org.freedesktop.Notifications.service`
+        - `~/.local/share/systemd/user/WslNotifyd.service`
+        - `~/.local/lib/WslNotifyd`
 2. Delete the registry key `HKCU\Software\Classes\AppUserModelId\WslNotifyd`
-  ```sh
-  reg.exe delete 'HKCU\Software\Classes\AppUserModelId\WslNotifyd'
-  ```
-  Remove quotes when you want to use cmd.exe
+    ```sh
+    reg.exe delete 'HKCU\Software\Classes\AppUserModelId\WslNotifyd'
+    ```
+    Remove quotes when you want to use cmd.exe
+
 ## Limitations
 
 - Markup is not supported

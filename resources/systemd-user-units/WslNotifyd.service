@@ -1,0 +1,7 @@
+[Unit]
+Description = WslNotifyd: notification server on WSL2
+
+[Service]
+Type = dbus
+BusName = org.freedesktop.Notifications
+ExecStart = @INSTALL_PREFIX@/lib/WslNotifyd/WslNotifyd

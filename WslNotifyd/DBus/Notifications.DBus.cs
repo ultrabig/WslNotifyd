@@ -23,8 +23,42 @@ namespace WslNotifyd.DBus
         public ObjectPath ObjectPath => new("/org/freedesktop/Notifications");
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
-        public event Func<Notifications, CloseNotificationEventArgs, Task>? OnCloseNotification;
-        public event Func<Notifications, NotifyEventArgs, Task<uint>>? OnNotify;
+
+        private TaskCompletionSource WaitFirstOnCloseNotification = new TaskCompletionSource();
+        private event Func<Notifications, CloseNotificationEventArgs, Task>? _OnCloseNotification;
+        public event Func<Notifications, CloseNotificationEventArgs, Task>? OnCloseNotification
+        {
+            add
+            {
+                _OnCloseNotification += value;
+                if (!WaitFirstOnCloseNotification.Task.IsCompleted)
+                {
+                    WaitFirstOnCloseNotification.TrySetResult();
+                }
+            }
+            remove
+            {
+                _OnCloseNotification -= value;
+            }
+        }
+
+        private TaskCompletionSource WaitFirstOnNotify = new TaskCompletionSource();
+        private event Func<Notifications, NotifyEventArgs, Task<uint>>? _OnNotify;
+        public event Func<Notifications, NotifyEventArgs, Task<uint>>? OnNotify
+        {
+            add
+            {
+                _OnNotify += value;
+                if (!WaitFirstOnNotify.Task.IsCompleted)
+                {
+                    WaitFirstOnNotify.TrySetResult();
+                }
+            }
+            remove
+            {
+                _OnNotify -= value;
+            }
+        }
 
         public Notifications(ILogger<Notifications> logger)
         {
@@ -33,7 +67,8 @@ namespace WslNotifyd.DBus
 
         public async Task CloseNotificationAsync(uint Id)
         {
-            var task = OnCloseNotification?.Invoke(this, new CloseNotificationEventArgs()
+            await WaitFirstOnCloseNotification.Task;
+            var task = _OnCloseNotification?.Invoke(this, new CloseNotificationEventArgs()
             {
                 NotificationId = Id,
             });
@@ -183,7 +218,8 @@ namespace WslNotifyd.DBus
                 toast.SetAttribute("duration", "long");
             }
 
-            var task = OnNotify?.Invoke(this, new NotifyEventArgs()
+            await WaitFirstOnNotify.Task;
+            var task = _OnNotify?.Invoke(this, new NotifyEventArgs()
             {
                 NotificationXml = doc.OuterXml,
                 NotificationId = notificationId,

@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name = org.freedesktop.Notifications
+Exec = @INSTALL_PREFIX@/lib/WslNotifyd/WslNotifyd
+SystemdService = WslNotifyd.service
