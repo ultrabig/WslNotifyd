@@ -70,7 +70,7 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```sh
     notify-send foo
     ```
-4. Use `systemd` command to stop WslNotifyd
+4. Use `systemctl` command to stop WslNotifyd
     ```sh
     systemctl --user stop WslNotifyd
     ```
