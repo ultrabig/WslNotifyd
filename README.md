@@ -4,7 +4,7 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
 
 ## Requirements
 - WSL2 (WSL1 is not confirmed to work)
-- [WSL2 settings](https://learn.microsoft.com/en-us/windows/wsl/wsl-config) (These settings are all enabled by default)
+- [WSL2 settings](https://learn.microsoft.com/en-us/windows/wsl/wsl-config)
     - [systemd](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#systemd-support) enabled
     - [localhostForwarding](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#main-wsl-settings) enabled
     - [Windows interop](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#interop-settings) enabled
