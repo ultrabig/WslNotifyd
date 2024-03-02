@@ -86,6 +86,9 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     - app_icon is supported
 - Custom sounds
 
+## Known issues
+- WSL2 won't shut down while WslNotifyd is running
+
 ## Uninstall
 
 1. Remove `out` directory
