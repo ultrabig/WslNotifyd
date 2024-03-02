@@ -1,4 +1,6 @@
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Xml;
 using Tmds.DBus;
 
@@ -141,6 +143,20 @@ namespace WslNotifyd.DBus
             targetElement.AppendChild(node);
         }
 
+        private void AddImage(XmlElement targetElement, string src, Dictionary<string, string>? attrs = null)
+        {
+            var node = targetElement.OwnerDocument.CreateElement("image");
+            node.SetAttribute("src", src);
+            if (attrs != null)
+            {
+                foreach (var (key, value) in attrs)
+                {
+                    node.SetAttribute(key, value);
+                }
+            }
+            targetElement.AppendChild(node);
+        }
+
         private string FilterXMLTag(string data)
         {
             try
@@ -161,6 +177,7 @@ namespace WslNotifyd.DBus
         {
             _logger.LogInformation("app_name: {0}, replaces_id: {1}, app_icon: {2}, summary: {3}, body: {4}, actions: [{5}], hints: [{6}], expire_timeout: {7}", AppName, ReplacesId, AppIcon, Summary, Body, string.Join(", ", Actions), string.Join(", ", Hints), ExpireTimeout);
             var content = """<toast><visual><binding template="ToastGeneric"></binding></visual></toast>""";
+            var data = new Dictionary<string, byte[]>();
             var doc = new XmlDocument();
             doc.LoadXml(content);
             var toast = (XmlElement)doc.SelectSingleNode("//toast[1]")!;
@@ -189,6 +206,34 @@ namespace WslNotifyd.DBus
             else
             {
                 notificationId = ReplacesId;
+            }
+
+            if (!string.IsNullOrEmpty(AppIcon))
+            {
+                // gives assertion error `assertion 'GDK_IS_SCREEN (screen)' failed`
+                // using var theme = Gtk.IconTheme.Default;
+                using var theme = new Gtk.IconTheme();
+                try
+                {
+                    using var icon = theme.LoadIcon(AppIcon, 96, 0);
+                    if (icon != null)
+                    {
+                        var buffer = icon.SaveToBuffer("png");
+                        var hashData = SHA256.HashData(buffer);
+                        var b = new StringBuilder();
+                        foreach (var x in hashData)
+                        {
+                            b.Append(x.ToString("x2"));
+                        }
+                        var hashString = b.ToString();
+                        data[hashString] = buffer;
+                        AddImage(binding, hashString, new() { { "placement", "appLogoOverride" }, });
+                    }
+                }
+                catch (GLib.GException ex)
+                {
+                    _logger.LogWarning("error while looking up an icon: {0}, {1}", AppIcon, ex.ToString());
+                }
             }
 
             string? audioSrc = null;
@@ -223,6 +268,7 @@ namespace WslNotifyd.DBus
             {
                 NotificationXml = doc.OuterXml,
                 NotificationId = notificationId,
+                NotificionData = data,
             });
             if (task != null)
             {
@@ -261,6 +307,7 @@ namespace WslNotifyd.DBus
         {
             public string NotificationXml { get; set; }
             public uint NotificationId { get; set; }
+            public IDictionary<string, byte[]> NotificionData { get; set; } = new Dictionary<string, byte[]>();
         }
     }
 #nullable enable

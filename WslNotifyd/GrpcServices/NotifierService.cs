@@ -79,6 +79,10 @@ namespace WslNotifyd.GrpcServices
                     NotificationId = args.NotificationId,
                     SerialId = serial,
                 };
+                foreach (var (k, v) in args.NotificionData)
+                {
+                    reply.NotificationData.Add(k, ByteString.CopyFrom(v));
+                }
                 var tcs = new TaskCompletionSource<uint>();
                 void handler(NotifyRequest req)
                 {

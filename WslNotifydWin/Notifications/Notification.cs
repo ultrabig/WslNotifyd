@@ -30,10 +30,42 @@ namespace WslNotifydWin.Notifications
             return Task.CompletedTask;
         }
 
-        public Task<uint> NotifyAsync(string notificationXml, uint notificationId)
+        public Task<uint> NotifyAsync(string notificationXml, uint notificationId, IDictionary<string, byte[]> notificationData)
         {
             var doc = new XmlDocument();
             doc.LoadXml(notificationXml);
+
+            var filesToRemove = new List<string>();
+            var nodesToRemove = new List<IXmlNode>();
+            foreach (var element in doc.SelectNodes("//image").Cast<XmlElement>())
+            {
+                var found = false;
+                var src = element.GetAttribute("src");
+                if (src != null)
+                {
+                    foreach (var (k, v) in notificationData)
+                    {
+                        if (k == src)
+                        {
+                            var path = Path.GetTempFileName();
+                            File.WriteAllBytes(path, v);
+                            filesToRemove.Add(path);
+                            var uri = new Uri(path);
+                            element.SetAttribute("src", uri.ToString());
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found)
+                {
+                    nodesToRemove.Add(element);
+                }
+            }
+            foreach (var node in nodesToRemove)
+            {
+                node.ParentNode.RemoveChild(node);
+            }
 
             var notif = new ToastNotification(doc)
             {
@@ -44,6 +76,15 @@ namespace WslNotifydWin.Notifications
             notif.Dismissed += HandleDismissed;
 
             _notifier.Show(notif);
+
+            // FIXME: is there a better way?
+            Task.Delay(5000).ContinueWith(_ =>
+            {
+                foreach (var f in filesToRemove)
+                {
+                    File.Delete(f);
+                }
+            });
 
             _toastHistory[notif.Tag] = notif;
             return Task.FromResult(notificationId);

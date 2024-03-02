@@ -19,7 +19,12 @@ namespace WslNotifydWin.GrpcServices
 
         protected override async Task<NotifyRequest> HandleResponseAsync(NotifyReply response, CancellationToken cancellationToken)
         {
-            var id = await notif.NotifyAsync(response.NotificationXml, response.NotificationId);
+            var data = new Dictionary<string, byte[]>();
+            foreach (var (k, v) in response.NotificationData)
+            {
+                data[k] = v.ToByteArray();
+            }
+            var id = await notif.NotifyAsync(response.NotificationXml, response.NotificationId, data);
             var req = new NotifyRequest()
             {
                 Success = true,

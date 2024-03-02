@@ -33,6 +33,7 @@ message NotifyReply {
     string notification_xml = 1;
     uint32 notification_id = 2;
     uint32 serial_id = 3;
+    map<string, bytes> notification_data = 4;
 }
 
 message NotificationClosedRequest {

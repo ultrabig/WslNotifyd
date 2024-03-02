@@ -45,6 +45,10 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```sh
     notify-send -u critical foo
     ```
+- Custom icons
+    ```sh
+    notify-send -i firefox foo
+    ```
 - Replace existing notifications
     ```sh
     $ notify-send -p foo
@@ -79,6 +83,7 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
 ## Todo
 
 - Custom icons and images
+    - app_icon is supported
 - Custom sounds
 
 ## Uninstall
