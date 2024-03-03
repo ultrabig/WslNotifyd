@@ -89,9 +89,14 @@ internal class Program
                         {
                             return false;
                         }
+                        if (cert.Thumbprint != serverCert.Thumbprint)
+                        {
+                            logger.LogWarning("invalid Thumbprint: {0}", cert.Thumbprint);
+                            return false;
+                        }
                         chain ??= new X509Chain();
                         chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-                        chain.ChainPolicy.CustomTrustStore.Add(serverCert);
+                        chain.ChainPolicy.CustomTrustStore.Add(cert);
                         var result = chain.Build(clientCert);
                         logger.LogDebug("client check: {0}", result);
                         return result;
