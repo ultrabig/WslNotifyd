@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace WslNotifyd.Services
 {
@@ -19,8 +20,8 @@ namespace WslNotifyd.Services
                 return;
             }
 
-            var addressFeature = server.Features.Get<IServerAddressesFeature>();
-            var address = addressFeature!.Addresses!.ElementAt(0)!;
+            var addressFeature = server.Features.GetRequiredFeature<IServerAddressesFeature>();
+            var address = addressFeature.Addresses.ElementAt(0);
             psi.ArgumentList.Add(address);
 
             using var proc = Process.Start(psi);
