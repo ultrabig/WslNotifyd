@@ -39,7 +39,7 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```
 - Actions
     ```sh
-    notify-send -w -A action1=aaa foo
+    notify-send -A action1=aaa foo
     ```
 - Urgency (critical only)
     ```sh
