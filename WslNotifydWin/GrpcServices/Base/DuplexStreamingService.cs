@@ -60,13 +60,13 @@ namespace WslNotifydWin.GrpcServices.Base
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if (_cts != null)
-            {
-                _cts.Cancel();
-            }
             if (streamingCall != null)
             {
                 await streamingCall.RequestStream.CompleteAsync();
+            }
+            if (_cts != null)
+            {
+                _cts.Cancel();
             }
             if (_readingTask != null)
             {
@@ -76,15 +76,15 @@ namespace WslNotifydWin.GrpcServices.Base
 
         public ValueTask DisposeAsync()
         {
-            if (_cts != null)
-            {
-                _cts.Dispose();
-                _cts = null;
-            }
             if (streamingCall != null)
             {
                 streamingCall.Dispose();
                 streamingCall = null;
+            }
+            if (_cts != null)
+            {
+                _cts.Dispose();
+                _cts = null;
             }
             if (_readingTask != null)
             {
