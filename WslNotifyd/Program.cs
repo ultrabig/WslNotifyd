@@ -4,10 +4,10 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Google.Protobuf;
 using GrpcNotification;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using WslNotifyd.DBus;
-using WslNotifyd.Extensions;
 using WslNotifyd.GrpcServices;
 using WslNotifyd.Services;
 
@@ -48,17 +48,9 @@ internal class Program
 
     private static void Main(string[] args)
     {
-        var listenAddress = "https://127.0.0.1:52394";
+        var listenAddress = "https://127.0.0.1:0";
         (var serverCert, var clientCert) = CreateCerts();
         var builder = WebApplication.CreateBuilder(args);
-
-        var msg = new CertificateMessage()
-        {
-            ServerCertificate = ByteString.CopyFrom(serverCert.Export(X509ContentType.Cert)),
-            ClientCertificate = ByteString.CopyFrom(clientCert.Export(X509ContentType.Pfx)),
-        };
-        clientCert.Dispose();
-        clientCert = null;
 #if DEBUG
         var notifydWinPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "../../../../WslNotifydWin/scripts/runner.sh");
         var workingDirectory = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "../../../../WslNotifydWin");
@@ -66,19 +58,33 @@ internal class Program
         var notifydWinPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "WslNotifydWin/WslNotifydWin.exe");
         var workingDirectory = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "WslNotifydWin");
 #endif
-        builder.Services.AddProcessService(new ProcessStartInfo(notifydWinPath)
+        builder.Services.AddSingleton<IHostedService>(serviceProvider =>
         {
-            UseShellExecute = false,
-            WorkingDirectory = workingDirectory,
-            ArgumentList = {
-                listenAddress,
-            },
-            RedirectStandardInput = true,
-            RedirectStandardOutput = false,
-            RedirectStandardError = false,
-            CreateNoWindow = true,
-        }, msg.ToByteArray());
-        msg = null;
+            var logger = serviceProvider.GetRequiredService<ILogger<WslNotifydWinProcessService>>();
+            var lifetime = serviceProvider.GetRequiredService<IHostApplicationLifetime>();
+            var server = serviceProvider.GetRequiredService<IServer>();
+            var psi = new ProcessStartInfo(notifydWinPath)
+            {
+                UseShellExecute = false,
+                WorkingDirectory = workingDirectory,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = false,
+                RedirectStandardError = false,
+                CreateNoWindow = true,
+            };
+
+            var msg = new CertificateMessage()
+            {
+                ServerCertificate = ByteString.CopyFrom(serverCert.Export(X509ContentType.Cert)),
+                ClientCertificate = ByteString.CopyFrom(clientCert.Export(X509ContentType.Pfx)),
+            };
+            clientCert.Dispose();
+            clientCert = null;
+
+            var stdin = msg.ToByteArray();
+
+            return new WslNotifydWinProcessService(logger, lifetime, server, psi, stdin);
+        });
         builder.Services.AddGrpc();
         builder.Services.AddSingleton<IHostedService, DBusNotificationService>();
         builder.Services.AddSingleton<Notifications>();
