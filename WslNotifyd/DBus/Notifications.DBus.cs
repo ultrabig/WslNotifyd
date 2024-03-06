@@ -157,6 +157,45 @@ namespace WslNotifyd.DBus
             targetElement.AppendChild(node);
         }
 
+        private bool CheckAudioSrc(string src)
+        {
+            // https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/element-audio
+            var list = new[] {
+                "ms-winsoundevent:Notification.Default",
+                "ms-winsoundevent:Notification.IM",
+                "ms-winsoundevent:Notification.Mail",
+                "ms-winsoundevent:Notification.Reminder",
+                "ms-winsoundevent:Notification.SMS",
+                "ms-winsoundevent:Notification.Looping.Alarm",
+                "ms-winsoundevent:Notification.Looping.Alarm2",
+                "ms-winsoundevent:Notification.Looping.Alarm3",
+                "ms-winsoundevent:Notification.Looping.Alarm4",
+                "ms-winsoundevent:Notification.Looping.Alarm5",
+                "ms-winsoundevent:Notification.Looping.Alarm6",
+                "ms-winsoundevent:Notification.Looping.Alarm7",
+                "ms-winsoundevent:Notification.Looping.Alarm8",
+                "ms-winsoundevent:Notification.Looping.Alarm9",
+                "ms-winsoundevent:Notification.Looping.Alarm10",
+                "ms-winsoundevent:Notification.Looping.Call",
+                "ms-winsoundevent:Notification.Looping.Call2",
+                "ms-winsoundevent:Notification.Looping.Call3",
+                "ms-winsoundevent:Notification.Looping.Call4",
+                "ms-winsoundevent:Notification.Looping.Call5",
+                "ms-winsoundevent:Notification.Looping.Call6",
+                "ms-winsoundevent:Notification.Looping.Call7",
+                "ms-winsoundevent:Notification.Looping.Call8",
+                "ms-winsoundevent:Notification.Looping.Call9",
+                "ms-winsoundevent:Notification.Looping.Call10",
+            };
+
+            var result = list.Contains(src);
+            if (!result)
+            {
+                _logger.LogWarning("audio src: {0} is not supported", src);
+            }
+            return result;
+        }
+
         private string FilterXMLTag(string data)
         {
             try
@@ -239,6 +278,10 @@ namespace WslNotifyd.DBus
             string? audioSrc = null;
             bool? audioLoop = null;
             bool? audioSuppress = null;
+            if (Hints.TryGetValue("sound-name", out var soundNameObj) && soundNameObj is string soundName && CheckAudioSrc(soundName))
+            {
+                audioSrc = soundName;
+            }
             if (Hints.TryGetValue("suppress-sound", out var suppressObj) && suppressObj is bool suppressBool)
             {
                 audioSuppress = suppressBool;

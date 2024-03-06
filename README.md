@@ -49,6 +49,11 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```sh
     notify-send -i firefox foo
     ```
+- Custom sounds
+    - You need to choose from the [predefined candidates](https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/element-audio) for the `sound-name`
+    ```sh
+    notify-send -h "string:sound-name:ms-winsoundevent:Notification.Reminder" foo
+    ```
 - Replace existing notifications
     ```sh
     $ notify-send -p foo
@@ -106,3 +111,4 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
 
 - Markup is not supported
 - Expiration timeout is not respected much
+- You cannot use arbitary audio files as notification sounds
