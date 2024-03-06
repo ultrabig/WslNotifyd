@@ -91,7 +91,7 @@ namespace WslNotifyd.DBus
                 // "body-images",
                 // "body-markup",
                 // "icon-multi",
-                // "icon-static",
+                "icon-static",
                 "persistence",
                 "sound",
             };
