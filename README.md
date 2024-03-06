@@ -50,9 +50,13 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     notify-send -i firefox foo
     ```
 - Custom sounds
-    - You need to choose from the [predefined candidates](https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/element-audio) for the `sound-name`
+    - You need to choose from the [predefined sounds](https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/element-audio) for the `sound-name`
     ```sh
     notify-send -h "string:sound-name:ms-winsoundevent:Notification.Reminder" foo
+    ```
+- Suppress sounds
+    ```sh
+    notify-send -h boolean:suppress-sound:true foo
     ```
 - Replace existing notifications
     ```sh
@@ -89,7 +93,6 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
 
 - Custom icons and images
     - app_icon is supported
-- Custom sounds
 
 ## Known issues
 - WSL2 won't shut down while WslNotifyd is running
