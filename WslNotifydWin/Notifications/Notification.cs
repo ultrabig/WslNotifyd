@@ -125,6 +125,8 @@ namespace WslNotifydWin.Notifications
                 // }
             }
             OnAction?.Invoke((uint.Parse(sender.Tag), actionKey));
+            // FIXME: wait for the notification sender to handle a action signal 
+            Thread.Sleep(1000);
             OnClose?.Invoke((uint.Parse(sender.Tag), reason));
             _toastHistory.Remove(sender.Tag, out _);
         }
