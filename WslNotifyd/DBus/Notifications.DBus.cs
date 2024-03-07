@@ -123,7 +123,7 @@ namespace WslNotifyd.DBus
         {
             var node = targetElement.OwnerDocument.CreateElement("action");
             node.SetAttribute("arguments", actionId);
-            var actionIconSet = false;
+            var content = action;
             if (actionIcons)
             {
                 var actionIconData = GetIconData(action, 48);
@@ -132,14 +132,10 @@ namespace WslNotifyd.DBus
                     var hashString = GetHashString(actionIconData);
                     notificationData[hashString] = actionIconData;
                     node.SetAttribute("imageUri", hashString);
-                    node.SetAttribute("content", "");
-                    actionIconSet = true;
+                    content = "";
                 }
             }
-            if (!actionIconSet)
-            {
-                node.SetAttribute("content", action);
-            }
+            node.SetAttribute("content", content);
             targetElement.AppendChild(node);
         }
 
