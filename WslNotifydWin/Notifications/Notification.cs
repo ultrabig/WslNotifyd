@@ -68,27 +68,32 @@ namespace WslNotifydWin.Notifications
             });
 
             var nodesToRemove = new List<IXmlNode>();
-            foreach (var element in doc.SelectNodes("//image").Cast<XmlElement>())
+            void replaceSrc(string xpath, string attr)
             {
-                var found = false;
-                var src = element.GetAttribute("src");
-                if (src != null)
+                foreach (var element in doc.SelectNodes(xpath).Cast<XmlElement>())
                 {
-                    foreach (var (hashString, localFileUri) in savedNotificationData)
+                    var found = false;
+                    var src = element.GetAttribute(attr);
+                    if (src != null)
                     {
-                        if (hashString == src)
+                        foreach (var (hashString, localFileUri) in savedNotificationData)
                         {
-                            element.SetAttribute("src", localFileUri.ToString());
-                            found = true;
-                            break;
+                            if (hashString == src)
+                            {
+                                element.SetAttribute(attr, localFileUri.ToString());
+                                found = true;
+                                break;
+                            }
                         }
                     }
-                }
-                if (!found)
-                {
-                    nodesToRemove.Add(element);
+                    if (!found)
+                    {
+                        nodesToRemove.Add(element);
+                    }
                 }
             }
+            replaceSrc("//image", "src");
+            replaceSrc("//action[@imageUri]", "imageUri");
             foreach (var node in nodesToRemove)
             {
                 node.ParentNode.RemoveChild(node);

@@ -86,7 +86,7 @@ namespace WslNotifyd.DBus
         {
             var capabilities = new[]
             {
-                // "action-icons",
+                "action-icons",
                 "actions",
                 "body",
                 // "body-hyperlinks",
@@ -119,11 +119,27 @@ namespace WslNotifyd.DBus
             targetElement.AppendChild(node);
         }
 
-        private void AddAction(XmlElement targetElement, string actionId, string action)
+        private void AddAction(XmlElement targetElement, string actionId, string action, bool actionIcons, IDictionary<string, byte[]> notificationData)
         {
             var node = targetElement.OwnerDocument.CreateElement("action");
-            node.SetAttribute("content", action);
             node.SetAttribute("arguments", actionId);
+            var actionIconSet = false;
+            if (actionIcons)
+            {
+                var actionIconData = GetIconData(action, 48);
+                if (actionIconData != null)
+                {
+                    var hashString = GetHashString(actionIconData);
+                    notificationData[hashString] = actionIconData;
+                    node.SetAttribute("imageUri", hashString);
+                    node.SetAttribute("content", "");
+                    actionIconSet = true;
+                }
+            }
+            if (!actionIconSet)
+            {
+                node.SetAttribute("content", action);
+            }
             targetElement.AppendChild(node);
         }
 
@@ -215,15 +231,20 @@ namespace WslNotifyd.DBus
             }
         }
 
-        private void AddImageData(XmlElement targetElement, byte[] imageData, IDictionary<string, byte[]> notificationData, Dictionary<string, string>? attrs = null)
+        private string GetHashString(byte[] data)
         {
-            var hashData = SHA256.HashData(imageData);
+            var hashData = SHA256.HashData(data);
             var b = new StringBuilder();
             foreach (var x in hashData)
             {
                 b.Append(x.ToString("x2"));
             }
-            var hashString = b.ToString();
+            return b.ToString();
+        }
+
+        private void AddImageData(XmlElement targetElement, byte[] imageData, IDictionary<string, byte[]> notificationData, Dictionary<string, string>? attrs = null)
+        {
+            var hashString = GetHashString(imageData);
             notificationData[hashString] = imageData;
             AddImage(targetElement, hashString, attrs);
         }
@@ -369,12 +390,17 @@ namespace WslNotifyd.DBus
             AddText(binding, FilterXMLTag(Body));
             AddText(binding, AppName, new() { { "placement", "attribution" }, });
 
+            if (!TryGetHintValue<bool>(Hints, "action-icons", out var actionIcons))
+            {
+                actionIcons = false;
+            }
+
             if (Actions.Length > 1)
             {
                 var actionsElement = doc.CreateElement("actions");
                 for (uint i = 0; i + 1 < Actions.Length; i += 2)
                 {
-                    AddAction(actionsElement, Actions[i], Actions[i + 1]);
+                    AddAction(actionsElement, Actions[i], Actions[i + 1], actionIcons, data);
                 }
                 toast.AppendChild(actionsElement);
             }
