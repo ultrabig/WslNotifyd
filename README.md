@@ -49,14 +49,21 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```sh
     notify-send -i firefox foo
     ```
+- Custom images
+    ```sh
+    # 1*1 blue pixel (width, height, rowstride, has_alpha, bits_per_sample, channels, rgb data array)
+    notify-send -h 'variant:image-data:(int32 1, int32 1, int32 3, false, int32 8, int32 3, [byte 0, 0, 255])' foo
+    # specify custom image path
+    notify-send -h 'string:image-path:/path/to/image.png' foo
+    ```
 - Custom sounds
     - You need to choose from the [predefined sounds](https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/element-audio) for the `sound-name`
     ```sh
-    notify-send -h "string:sound-name:ms-winsoundevent:Notification.Reminder" foo
+    notify-send -h 'string:sound-name:ms-winsoundevent:Notification.Reminder' foo
     ```
 - Suppress sounds
     ```sh
-    notify-send -h boolean:suppress-sound:true foo
+    notify-send -h 'boolean:suppress-sound:true' foo
     ```
 - Replace existing notifications
     ```sh
@@ -90,9 +97,9 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```
 
 ## Todo
-
-- Custom icons and images
-    - app_icon is supported
+- `action-icons` hint
+- Map [sound naming specification](https://specifications.freedesktop.org/sound-naming-spec/sound-naming-spec-latest.html) `sound-name` to `ms-winsoundevent` name
+- Shut down WslNotifydWin when WsiNotifyd is idle
 
 ## Known issues
 - WSL2 won't shut down while WslNotifyd is running

@@ -35,7 +35,38 @@ namespace WslNotifydWin.Notifications
             var doc = new XmlDocument();
             doc.LoadXml(notificationXml);
 
-            var filesToRemove = new List<string>();
+            var savedNotificationData = new Dictionary<string, Uri>();
+            try
+            {
+                foreach (var (hashString, imageData) in notificationData)
+                {
+                    var path = Path.GetTempFileName();
+                    var uri = new Uri(path);
+                    File.WriteAllBytes(path, imageData);
+                    savedNotificationData[hashString] = uri;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "error while saving images");
+            }
+
+            // FIXME: is there a better way?
+            Task.Delay(5000).ContinueWith(_ =>
+            {
+                try
+                {
+                    foreach (var uri in savedNotificationData.Values)
+                    {
+                        File.Delete(uri.AbsolutePath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "error while deleting images");
+                }
+            });
+
             var nodesToRemove = new List<IXmlNode>();
             foreach (var element in doc.SelectNodes("//image").Cast<XmlElement>())
             {
@@ -43,15 +74,11 @@ namespace WslNotifydWin.Notifications
                 var src = element.GetAttribute("src");
                 if (src != null)
                 {
-                    foreach (var (k, v) in notificationData)
+                    foreach (var (hashString, localFileUri) in savedNotificationData)
                     {
-                        if (k == src)
+                        if (hashString == src)
                         {
-                            var path = Path.GetTempFileName();
-                            File.WriteAllBytes(path, v);
-                            filesToRemove.Add(path);
-                            var uri = new Uri(path);
-                            element.SetAttribute("src", uri.ToString());
+                            element.SetAttribute("src", localFileUri.ToString());
                             found = true;
                             break;
                         }
@@ -76,15 +103,6 @@ namespace WslNotifydWin.Notifications
             notif.Dismissed += HandleDismissed;
 
             _notifier.Show(notif);
-
-            // FIXME: is there a better way?
-            Task.Delay(5000).ContinueWith(_ =>
-            {
-                foreach (var f in filesToRemove)
-                {
-                    File.Delete(f);
-                }
-            });
 
             _toastHistory[notif.Tag] = notif;
             return Task.FromResult(notificationId);

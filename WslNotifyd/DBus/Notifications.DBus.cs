@@ -7,6 +7,8 @@ using Tmds.DBus;
 [assembly: InternalsVisibleTo(Tmds.DBus.Connection.DynamicAssemblyName)]
 namespace WslNotifyd.DBus
 {
+    using NotificationImageData = (int width, int height, int rowstride, bool hasAlpha, int bitsPerSample, int channels, byte[] data);
+
     [DBusInterface("org.freedesktop.Notifications")]
     interface INotifications : IDBusObject
     {
@@ -207,9 +209,149 @@ namespace WslNotifyd.DBus
             }
             catch (XmlException ex)
             {
-                _logger.LogInformation("Parse Error. fallback: {0}", ex.ToString());
+                _logger.LogInformation(ex, "Parse Error. fallback");
                 return data;
             }
+        }
+
+        private void AddImageData(XmlElement targetElement, byte[] imageData, IDictionary<string, byte[]> notificationData, Dictionary<string, string>? attrs = null)
+        {
+            var hashData = SHA256.HashData(imageData);
+            var b = new StringBuilder();
+            foreach (var x in hashData)
+            {
+                b.Append(x.ToString("x2"));
+            }
+            var hashString = b.ToString();
+            notificationData[hashString] = imageData;
+            AddImage(targetElement, hashString, attrs);
+        }
+
+        private byte[]? GetIconData(string iconName, int size)
+        {
+            // gives assertion error `assertion 'GDK_IS_SCREEN (screen)' failed`
+            // using var theme = Gtk.IconTheme.Default;
+            using var theme = new Gtk.IconTheme();
+            try
+            {
+                using var icon = theme.LoadIcon(iconName, size, 0);
+                if (icon == null)
+                {
+                    _logger.LogWarning("icon not found: {0}", iconName);
+                    return null;
+                }
+                return icon.SaveToBuffer("png");
+            }
+            catch (GLib.GException ex)
+            {
+                _logger.LogWarning(ex, "error while looking up an icon: {0}", iconName);
+                return null;
+            }
+        }
+
+        private byte[]? GetDataFromImagePath(string imagePath)
+        {
+            if (imagePath.StartsWith("file://") || imagePath.StartsWith('/'))
+            {
+                Uri? uri;
+                try
+                {
+                    uri = new Uri(imagePath);
+                }
+                catch (UriFormatException ex)
+                {
+                    _logger.LogWarning(ex, "uri {0} is malformed", imagePath);
+                    return null;
+                }
+                var absPath = uri.AbsolutePath;
+                try
+                {
+                    using var image = new Gdk.Pixbuf(absPath);
+                    return image.SaveToBuffer("png");
+                }
+                catch (GLib.GException ex)
+                {
+                    _logger.LogWarning(ex, "error while reading image {0}", absPath);
+                    return null;
+                }
+            }
+            else
+            {
+                var iconData = GetIconData(imagePath, 256);
+                if (iconData == null)
+                {
+                    _logger.LogWarning("{0} is not valid as file:// uri, absolute path or icon name", imagePath);
+                    return null;
+                }
+                return iconData;
+            }
+        }
+
+        private byte[]? ToPngData(NotificationImageData data)
+        {
+            try
+            {
+                if (data.hasAlpha && data.channels != 4)
+                {
+                    _logger.LogWarning("has_alpha == true and channels != 4");
+                    return null;
+                }
+                if (!data.hasAlpha && data.channels != 3)
+                {
+                    _logger.LogWarning("has_alpha == false and channels != 3");
+                    return null;
+                }
+                if (data.bitsPerSample != 8)
+                {
+                    _logger.LogWarning("bits_per_sample != 8");
+                    return null;
+                }
+                if (data.width * data.channels != data.rowstride)
+                {
+                    _logger.LogWarning("the rowstride is invalid");
+                    return null;
+                }
+                if (data.data.Length != data.rowstride * data.height)
+                {
+                    _logger.LogWarning("the data length is invalid");
+                    return null;
+                }
+                using var pixbuf = new Gdk.Pixbuf(data.data, Gdk.Colorspace.Rgb, data.hasAlpha, data.bitsPerSample, data.width, data.height, data.rowstride);
+                return pixbuf.SaveToBuffer("png");
+            }
+            catch (GLib.GException ex)
+            {
+                _logger.LogWarning(ex, "error while loading image data as a gdk-pixbuf");
+                return null;
+            }
+        }
+
+        private bool TryGetHintValue<T>(IDictionary<string, object> hints, string key, out T outValue)
+        {
+            if (hints.TryGetValue(key, out var valueObj) && valueObj is T v)
+            {
+                outValue = v;
+                return true;
+            }
+#pragma warning disable CS8601 // Possible null reference assignment.
+            outValue = default;
+#pragma warning restore CS8601 // Possible null reference assignment.
+            return false;
+        }
+
+        private bool TryGetHintValue<T>(IDictionary<string, object> hints, IEnumerable<string> keys, out T outValue)
+        {
+            foreach (var key in keys)
+            {
+                if (TryGetHintValue(hints, key, out outValue))
+                {
+                    return true;
+                }
+            }
+#pragma warning disable CS8601 // Possible null reference assignment.
+            outValue = default;
+#pragma warning restore CS8601 // Possible null reference assignment.
+            return false;
         }
 
         public async Task<uint> NotifyAsync(string AppName, uint ReplacesId, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout)
@@ -249,49 +391,59 @@ namespace WslNotifyd.DBus
 
             if (!string.IsNullOrEmpty(AppIcon))
             {
-                // gives assertion error `assertion 'GDK_IS_SCREEN (screen)' failed`
-                // using var theme = Gtk.IconTheme.Default;
-                using var theme = new Gtk.IconTheme();
-                try
+                var appIconData = GetIconData(AppIcon, 96);
+                if (appIconData != null)
                 {
-                    using var icon = theme.LoadIcon(AppIcon, 96, 0);
-                    if (icon != null)
-                    {
-                        var buffer = icon.SaveToBuffer("png");
-                        var hashData = SHA256.HashData(buffer);
-                        var b = new StringBuilder();
-                        foreach (var x in hashData)
-                        {
-                            b.Append(x.ToString("x2"));
-                        }
-                        var hashString = b.ToString();
-                        data[hashString] = buffer;
-                        AddImage(binding, hashString, new() { { "placement", "appLogoOverride" }, });
-                    }
+                    AddImageData(binding, appIconData, data, new() { { "placement", "appLogoOverride" }, });
                 }
-                catch (GLib.GException ex)
+            }
+
+            var imageAdded = false;
+            if (!imageAdded && TryGetHintValue<NotificationImageData>(Hints, ["image-data", "image_data"], out var imageData))
+            {
+                var pngData = ToPngData(imageData);
+                if (pngData != null)
                 {
-                    _logger.LogWarning("error while looking up an icon: {0}, {1}", AppIcon, ex.ToString());
+                    AddImageData(binding, pngData, data);
+                    imageAdded = true;
+                }
+            }
+            if (!imageAdded && TryGetHintValue<string>(Hints, ["image-path", "image_path"], out var imagePath) && !string.IsNullOrEmpty(imagePath))
+            {
+                var localImageData = GetDataFromImagePath(imagePath);
+                if (localImageData != null)
+                {
+                    AddImageData(binding, localImageData, data);
+                    imageAdded = true;
+                }
+            }
+            if (!imageAdded && TryGetHintValue<NotificationImageData>(Hints, "icon_data", out var iconData))
+            {
+                var pngData = ToPngData(iconData);
+                if (pngData != null)
+                {
+                    AddImageData(binding, pngData, data);
+                    imageAdded = true;
                 }
             }
 
             string? audioSrc = null;
             bool? audioLoop = null;
             bool? audioSuppress = null;
-            if (Hints.TryGetValue("sound-name", out var soundNameObj) && soundNameObj is string soundName && CheckAudioSrc(soundName))
+            if (TryGetHintValue<string>(Hints, "sound-name", out var soundName) && CheckAudioSrc(soundName))
             {
                 audioSrc = soundName;
             }
-            if (Hints.TryGetValue("suppress-sound", out var suppressObj) && suppressObj is bool suppressBool)
+            if (TryGetHintValue<bool>(Hints, "suppress-sound", out var suppressSound))
             {
-                audioSuppress = suppressBool;
+                audioSuppress = suppressSound;
             }
             if (audioSrc != null || audioLoop != null || audioSuppress != null)
             {
                 AddAudio(toast, audioSrc, audioLoop, audioSuppress);
             }
 
-            if (Hints.TryGetValue("urgency", out var urgencyObj) && urgencyObj is byte urgency && urgency == 2)
+            if (TryGetHintValue<byte>(Hints, "urgency", out var urgency) && urgency == 2)
             {
                 toast.SetAttribute("scenario", "urgent");
             }
@@ -352,6 +504,6 @@ namespace WslNotifyd.DBus
             public uint NotificationId { get; set; }
             public IDictionary<string, byte[]> NotificionData { get; set; } = new Dictionary<string, byte[]>();
         }
-    }
 #nullable enable
+    }
 }
