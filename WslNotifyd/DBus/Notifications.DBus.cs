@@ -84,7 +84,7 @@ namespace WslNotifyd.DBus
 
         public Task<string[]> GetCapabilitiesAsync()
         {
-            var capabilities = new string[]
+            var capabilities = new[]
             {
                 // "action-icons",
                 "actions",
@@ -162,7 +162,8 @@ namespace WslNotifyd.DBus
         private bool CheckAudioSrc(string src)
         {
             // https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/element-audio
-            var list = new[] {
+            var list = new[]
+            {
                 "ms-winsoundevent:Notification.Default",
                 "ms-winsoundevent:Notification.IM",
                 "ms-winsoundevent:Notification.Mail",
@@ -253,17 +254,17 @@ namespace WslNotifyd.DBus
         {
             if (imagePath.StartsWith("file://") || imagePath.StartsWith('/'))
             {
-                Uri? uri;
+                string absPath;
                 try
                 {
-                    uri = new Uri(imagePath);
+                    var uri = new Uri(imagePath);
+                    absPath = uri.AbsolutePath;
                 }
-                catch (UriFormatException ex)
+                catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "uri {0} is malformed", imagePath);
                     return null;
                 }
-                var absPath = uri.AbsolutePath;
                 try
                 {
                     using var image = new Gdk.Pixbuf(absPath);
@@ -271,7 +272,7 @@ namespace WslNotifyd.DBus
                 }
                 catch (GLib.GException ex)
                 {
-                    _logger.LogWarning(ex, "error while reading image {0}", absPath);
+                    _logger.LogWarning(ex, "error while reading image {0}", imagePath);
                     return null;
                 }
             }
@@ -289,33 +290,33 @@ namespace WslNotifyd.DBus
 
         private byte[]? ToPngData(NotificationImageData data)
         {
+            if (data.hasAlpha && data.channels != 4)
+            {
+                _logger.LogWarning("has_alpha == true and channels != 4");
+                return null;
+            }
+            if (!data.hasAlpha && data.channels != 3)
+            {
+                _logger.LogWarning("has_alpha == false and channels != 3");
+                return null;
+            }
+            if (data.bitsPerSample != 8)
+            {
+                _logger.LogWarning("bits_per_sample != 8");
+                return null;
+            }
+            if (data.width * data.channels != data.rowstride)
+            {
+                _logger.LogWarning("the rowstride is invalid");
+                return null;
+            }
+            if (data.data.Length != data.rowstride * data.height)
+            {
+                _logger.LogWarning("the data length is invalid");
+                return null;
+            }
             try
             {
-                if (data.hasAlpha && data.channels != 4)
-                {
-                    _logger.LogWarning("has_alpha == true and channels != 4");
-                    return null;
-                }
-                if (!data.hasAlpha && data.channels != 3)
-                {
-                    _logger.LogWarning("has_alpha == false and channels != 3");
-                    return null;
-                }
-                if (data.bitsPerSample != 8)
-                {
-                    _logger.LogWarning("bits_per_sample != 8");
-                    return null;
-                }
-                if (data.width * data.channels != data.rowstride)
-                {
-                    _logger.LogWarning("the rowstride is invalid");
-                    return null;
-                }
-                if (data.data.Length != data.rowstride * data.height)
-                {
-                    _logger.LogWarning("the data length is invalid");
-                    return null;
-                }
                 using var pixbuf = new Gdk.Pixbuf(data.data, Gdk.Colorspace.Rgb, data.hasAlpha, data.bitsPerSample, data.width, data.height, data.rowstride);
                 return pixbuf.SaveToBuffer("png");
             }
