@@ -30,14 +30,14 @@ namespace WslNotifydWin.GrpcServices
             return Task.CompletedTask;
         }
 
-        private void HandleClose((uint, uint) arg)
+        private void HandleClose((uint id, uint reason) arg)
         {
             if (streamingCall != null)
             {
                 streamingCall.RequestStream.WriteAsync(new NotificationClosedRequest()
                 {
-                    NotificationId = arg.Item1,
-                    Reason = arg.Item2,
+                    NotificationId = arg.id,
+                    Reason = arg.reason,
                 }).Wait();
             }
         }
