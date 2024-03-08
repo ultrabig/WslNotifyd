@@ -267,7 +267,7 @@ namespace WslNotifyd.DBus
             }
         }
 
-        private byte[]? GetDataFromImagePath(string imagePath)
+        private byte[]? GetDataFromImagePath(string imagePath, int size)
         {
             if (imagePath.StartsWith("file://") || imagePath.StartsWith('/'))
             {
@@ -295,7 +295,7 @@ namespace WslNotifyd.DBus
             }
             else
             {
-                var iconData = GetIconData(imagePath, 256);
+                var iconData = GetIconData(imagePath, size);
                 if (iconData == null)
                 {
                     _logger.LogWarning("{0} is not valid as file:// uri, absolute path or icon name", imagePath);
@@ -414,7 +414,7 @@ namespace WslNotifyd.DBus
 
             if (!string.IsNullOrEmpty(AppIcon))
             {
-                var appIconData = GetIconData(AppIcon, 96);
+                var appIconData = GetDataFromImagePath(AppIcon, 96);
                 if (appIconData != null)
                 {
                     AddImageData(binding, appIconData, data, new() { { "placement", "appLogoOverride" }, });
@@ -433,7 +433,7 @@ namespace WslNotifyd.DBus
             }
             if (!imageAdded && TryGetHintValue<string>(Hints, ["image-path", "image_path"], out var imagePath) && !string.IsNullOrEmpty(imagePath))
             {
-                var localImageData = GetDataFromImagePath(imagePath);
+                var localImageData = GetDataFromImagePath(imagePath, 256);
                 if (localImageData != null)
                 {
                     AddImageData(binding, localImageData, data);
