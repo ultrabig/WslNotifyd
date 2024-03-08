@@ -19,22 +19,22 @@ namespace WslNotifyd.NotificationBuilders
 
         private void AddText(XmlElement targetElement, string text, Dictionary<string, string>? attrs = null)
         {
-            var node = targetElement.OwnerDocument.CreateElement("text");
-            node.InnerText = text;
+            var el = targetElement.OwnerDocument.CreateElement("text");
+            el.InnerText = text;
             if (attrs != null)
             {
                 foreach (var (key, value) in attrs)
                 {
-                    node.SetAttribute(key, value);
+                    el.SetAttribute(key, value);
                 }
             }
-            targetElement.AppendChild(node);
+            targetElement.AppendChild(el);
         }
 
-        private void AddAction(XmlElement targetElement, string actionId, string action, bool actionIcons)
+        private XmlElement CreateAction(XmlElement targetElement, string actionId, string action, bool actionIcons, Dictionary<string, string>? attrs = null)
         {
-            var node = targetElement.OwnerDocument.CreateElement("action");
-            node.SetAttribute("arguments", actionId);
+            var el = targetElement.OwnerDocument.CreateElement("action");
+            el.SetAttribute("arguments", actionId);
             var content = action;
             if (actionIcons)
             {
@@ -43,44 +43,60 @@ namespace WslNotifyd.NotificationBuilders
                 {
                     var hashString = GetHashString(actionIconData);
                     _data[hashString] = actionIconData;
-                    node.SetAttribute("imageUri", hashString);
+                    el.SetAttribute("imageUri", hashString);
                     content = "";
                 }
             }
-            node.SetAttribute("content", content);
-            targetElement.AppendChild(node);
-        }
-
-        private void AddAudio(XmlElement targetElement, string? src, bool? loop, bool? silent)
-        {
-            var node = targetElement.OwnerDocument.CreateElement("audio");
-            if (src != null)
-            {
-                node.SetAttribute("src", src);
-            }
-            if (loop is bool loopBool)
-            {
-                node.SetAttribute("loop", loopBool ? "true" : "false");
-            }
-            if (silent is bool silentBool)
-            {
-                node.SetAttribute("silent", silentBool ? "true" : "false");
-            }
-            targetElement.AppendChild(node);
-        }
-
-        private void AddImage(XmlElement targetElement, string src, Dictionary<string, string>? attrs = null)
-        {
-            var node = targetElement.OwnerDocument.CreateElement("image");
-            node.SetAttribute("src", src);
+            el.SetAttribute("content", content);
             if (attrs != null)
             {
                 foreach (var (key, value) in attrs)
                 {
-                    node.SetAttribute(key, value);
+                    el.SetAttribute(key, value);
                 }
             }
-            targetElement.AppendChild(node);
+            return el;
+        }
+
+        private XmlElement CreateInput(XmlElement targetElement, string id, string type, string placeHolderContent)
+        {
+            var el = targetElement.OwnerDocument.CreateElement("input");
+            el.SetAttribute("id", id);
+            el.SetAttribute("type", type);
+            el.SetAttribute("placeHolderContent", placeHolderContent);
+            return el;
+        }
+
+        private void AddAudio(XmlElement targetElement, string? src, bool? loop, bool? silent)
+        {
+            var el = targetElement.OwnerDocument.CreateElement("audio");
+            if (src != null)
+            {
+                el.SetAttribute("src", src);
+            }
+            if (loop is bool loopBool)
+            {
+                el.SetAttribute("loop", loopBool ? "true" : "false");
+            }
+            if (silent is bool silentBool)
+            {
+                el.SetAttribute("silent", silentBool ? "true" : "false");
+            }
+            targetElement.AppendChild(el);
+        }
+
+        private void AddImage(XmlElement targetElement, string src, Dictionary<string, string>? attrs = null)
+        {
+            var el = targetElement.OwnerDocument.CreateElement("image");
+            el.SetAttribute("src", src);
+            if (attrs != null)
+            {
+                foreach (var (key, value) in attrs)
+                {
+                    el.SetAttribute(key, value);
+                }
+            }
+            targetElement.AppendChild(el);
         }
 
         private bool CheckAudioSrc(string src)
@@ -306,12 +322,40 @@ namespace WslNotifyd.NotificationBuilders
                 actionIcons = false;
             }
 
+            var inlineReplyAdded = false;
             if (Actions.Length > 1)
             {
                 var actionsElement = _doc.CreateElement("actions");
+                var inputs = new List<XmlElement>();
+                var actions = new List<XmlElement>();
                 for (uint i = 0; i + 1 < Actions.Length; i += 2)
                 {
-                    AddAction(actionsElement, Actions[i], Actions[i + 1], actionIcons);
+                    var actionId = Actions[i];
+                    var actionText = Actions[i + 1];
+                    var attrs = new Dictionary<string, string>();
+                    if (actionId == "inline-reply")
+                    {
+                        if (inlineReplyAdded)
+                        {
+                            _logger.LogWarning("duplicated inline-reply");
+                            continue;
+                        }
+                        inlineReplyAdded = true;
+                        if (!TryGetHintValue<string>(Hints, "x-kde-reply-placeholder-text", out var placeholder))
+                        {
+                            placeholder = "";
+                        }
+                        var id = actionId;
+                        var input = CreateInput(actionsElement, id, "text", placeholder);
+                        inputs.Add(input);
+                        attrs["hint-inputId"] = id;
+                    }
+                    var action = CreateAction(actionsElement, actionId, actionText, actionIcons, attrs);
+                    actions.Add(action);
+                }
+                foreach (var el in inputs.Concat(actions))
+                {
+                    actionsElement.AppendChild(el);
                 }
                 toast.AppendChild(actionsElement);
             }

@@ -19,17 +19,17 @@ namespace WslNotifydWin.GrpcServices
 
         protected override Task RegisterEventHandlerAsync()
         {
-            notif.OnAction += HandleClose;
+            notif.OnAction += HandleAction;
             return Task.CompletedTask;
         }
 
         protected override Task UnregisterEventHandlerAsync()
         {
-            notif.OnAction -= HandleClose;
+            notif.OnAction -= HandleAction;
             return Task.CompletedTask;
         }
 
-        private void HandleClose((uint id, string actionKey) arg)
+        private void HandleAction((uint id, string actionKey) arg)
         {
             if (streamingCall != null)
             {

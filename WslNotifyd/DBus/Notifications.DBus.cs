@@ -15,6 +15,7 @@ namespace WslNotifyd.DBus
         Task<(string name, string vendor, string version, string specVersion)> GetServerInformationAsync();
         Task<IDisposable> WatchNotificationClosedAsync(Action<(uint id, uint reason)> handler, Action<Exception>? onError = null);
         Task<IDisposable> WatchActionInvokedAsync(Action<(uint id, string actionKey)> handler, Action<Exception>? onError = null);
+        Task<IDisposable> WatchNotificationRepliedAsync(Action<(uint id, string text)> handler, Action<Exception>? onError = null);
     }
 
     class Notifications : INotifications
@@ -25,6 +26,7 @@ namespace WslNotifyd.DBus
         public ObjectPath ObjectPath => new("/org/freedesktop/Notifications");
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
+        public event Action<(uint id, string text)>? OnReply;
 
         private readonly TaskCompletionSource WaitFirstOnCloseNotification = new TaskCompletionSource();
         private event Func<Notifications, CloseNotificationEventArgs, Task>? _OnCloseNotification;
@@ -95,6 +97,9 @@ namespace WslNotifyd.DBus
                 "icon-static",
                 "persistence",
                 "sound",
+
+                // non-standard
+                "inline-reply",
             };
             return Task.FromResult(capabilities);
         }
@@ -146,6 +151,11 @@ namespace WslNotifyd.DBus
             return SignalWatcher.AddAsync(this, nameof(OnAction), handler);
         }
 
+        public Task<IDisposable> WatchNotificationRepliedAsync(Action<(uint id, string text)> handler, Action<Exception>? onError = null)
+        {
+            return SignalWatcher.AddAsync(this, nameof(OnReply), handler);
+        }
+
         public void FireOnClose(uint id, uint reason)
         {
             OnClose?.Invoke((id, reason));
@@ -156,17 +166,22 @@ namespace WslNotifyd.DBus
             OnAction?.Invoke((id, actionKey));
         }
 
+        public void FireOnReply(uint id, string text)
+        {
+            OnReply?.Invoke((id, text));
+        }
+
 #nullable disable
         public class CloseNotificationEventArgs : EventArgs
         {
-            public uint NotificationId { get; set; }
+            public uint NotificationId { get; init; }
         }
 
         public class NotifyEventArgs : EventArgs
         {
-            public string NotificationXml { get; set; }
-            public uint NotificationId { get; set; }
-            public IDictionary<string, byte[]> NotificionData { get; set; } = new Dictionary<string, byte[]>();
+            public string NotificationXml { get; init; }
+            public uint NotificationId { get; init; }
+            public IDictionary<string, byte[]> NotificionData { get; init; }
         }
 #nullable enable
     }

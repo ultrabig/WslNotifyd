@@ -13,6 +13,7 @@ namespace WslNotifydWin.Notifications
         private readonly ConcurrentDictionary<string, ToastNotification> _toastHistory = new();
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
+        public event Action<(uint id, string text)>? OnReply;
 
         public Notification(string aumId, ILogger<Notification> logger)
         {
@@ -118,21 +119,32 @@ namespace WslNotifydWin.Notifications
             _logger.LogInformation("notification {0} has been activated", sender.Tag);
             string actionKey = "default";
             const uint reason = 2;
+            var id = uint.Parse(sender.Tag);
             if (args is ToastActivatedEventArgs eventArgs)
             {
                 if (!string.IsNullOrEmpty(eventArgs.Arguments))
                 {
                     actionKey = eventArgs.Arguments;
                 }
-                // foreach (var (k, v) in eventArgs.UserInput)
-                // {
-                //     _logger.LogInformation("{0}: {1}", k, v);
-                // }
+                if (actionKey == "inline-reply")
+                {
+                    foreach (var (k, v) in eventArgs.UserInput)
+                    {
+                        if (k == actionKey && v is string text)
+                        {
+                            // _logger.LogInformation("UserInput => {0}: {1}", k, v);
+                            OnReply?.Invoke((id, text));
+                            // FIXME: wait for the notification sender to handle the reply signal 
+                            Thread.Sleep(100);
+                            break;
+                        }
+                    }
+                }
             }
-            OnAction?.Invoke((uint.Parse(sender.Tag), actionKey));
-            // FIXME: wait for the notification sender to handle a action signal 
-            Thread.Sleep(1000);
-            OnClose?.Invoke((uint.Parse(sender.Tag), reason));
+            OnAction?.Invoke((id, actionKey));
+            // FIXME: wait for the notification sender to handle the action signal 
+            Thread.Sleep(100);
+            OnClose?.Invoke((id, reason));
             _toastHistory.Remove(sender.Tag, out _);
         }
 

@@ -114,6 +114,7 @@ internal class Program
         builder.Services.AddSingleton<IHostedService, NotificationClosedSignalService>();
         builder.Services.AddSingleton<IHostedService, CloseNotificationMessageService>();
         builder.Services.AddSingleton<IHostedService, NotifyMessageService>();
+        builder.Services.AddSingleton<IHostedService, NotificationRepliedSignalService>();
 
         var app = builder.Build();
         app.Run();

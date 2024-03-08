@@ -138,6 +138,15 @@ namespace WslNotifyd.GrpcServices
             return new ActionInvokedReply();
         }
 
+        public override async Task<NotificationRepliedReply> NotificationReplied(IAsyncStreamReader<NotificationRepliedRequest> requestStream, ServerCallContext context)
+        {
+            await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
+            {
+                _notifications.FireOnReply(request.NotificationId, request.Text);
+            }
+            return new NotificationRepliedReply();
+        }
+
         private class EventWatcher<T>
         {
             public event Action<T>? OnEventOccured;
