@@ -99,6 +99,7 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```
 
 ## Todo
+- `desktop-entry` hint
 - Map [sound naming specification](https://specifications.freedesktop.org/sound-naming-spec/sound-naming-spec-latest.html) `sound-name` to `ms-winsoundevent` name
 - Shut down WslNotifydWin when WsiNotifyd is idle
 
