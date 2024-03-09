@@ -333,6 +333,7 @@ namespace WslNotifyd.NotificationBuilders
                     var actionId = Actions[i];
                     var actionText = Actions[i + 1];
                     var attrs = new Dictionary<string, string>();
+
                     if (actionId == "inline-reply")
                     {
                         if (inlineReplyAdded)
@@ -350,6 +351,13 @@ namespace WslNotifyd.NotificationBuilders
                         inputs.Add(input);
                         attrs["hint-inputId"] = id;
                     }
+
+                    if (actionId == "default")
+                    {
+                        _logger.LogInformation("default key found, not adding a button");
+                        continue;
+                    }
+
                     var action = CreateAction(actionsElement, actionId, actionText, actionIcons, attrs);
                     actions.Add(action);
                 }
