@@ -173,26 +173,72 @@ namespace WslNotifyd.NotificationBuilders
             AddImage(targetElement, hashString, attrs);
         }
 
-        private byte[]? GetIconData(string iconName, int size)
+        private byte[]? GetIconData(string[] iconNames, int size)
         {
-            // gives assertion error `assertion 'GDK_IS_SCREEN (screen)' failed`
-            // using var theme = Gtk.IconTheme.Default;
-            using var theme = new Gtk.IconTheme();
             try
             {
-                using var icon = theme.LoadIcon(iconName, size, 0);
-                if (icon == null)
+                // gives assertion error `assertion 'GDK_IS_SCREEN (screen)' failed`
+                // using var theme = Gtk.IconTheme.Default;
+                using var theme = new Gtk.IconTheme();
+                if (theme == null)
                 {
-                    _logger.LogWarning("icon not found: {0}", iconName);
+                    _logger.LogWarning("error in getting icon theme");
                     return null;
                 }
-                return icon.SaveToBuffer("png");
+                using var iconInfo = theme.ChooseIcon(iconNames, size, 0);
+                if (iconInfo == null)
+                {
+                    _logger.LogWarning("error in getting icon info");
+                    return null;
+                }
+                using var pixbuf = iconInfo.LoadIcon();
+                if (pixbuf == null)
+                {
+                    _logger.LogWarning("error in rendering icon {0}", iconInfo.Filename);
+                    return null;
+                }
+                return pixbuf.SaveToBuffer("png");
             }
             catch (GLib.GException ex)
             {
-                _logger.LogWarning(ex, "error while looking up an icon: {0}", iconName);
+                _logger.LogWarning(ex, "error while looking up an icon: {0}", string.Join(", ", iconNames));
                 return null;
             }
+        }
+
+        private byte[]? GetIconData(string iconName, int size)
+        {
+            return GetIconData([iconName], size);
+        }
+
+        private byte[]? GetIconDataFromDesktopEntryName(string desktopEntryName, int size)
+        {
+            var desktopEntryId = $"{desktopEntryName}.desktop";
+            try
+            {
+                foreach (var entry in GLib.AppInfoAdapter.GetAll())
+                {
+                    var id = entry.Id;
+                    // Firefox passes desktop-entry as "Firefox", but its desktop entry id is "firefox.desktop"
+                    if (string.Equals(id, desktopEntryId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var icon = entry.Icon;
+                        if (icon is GLib.ThemedIcon themedIcon)
+                        {
+                            return GetIconData(themedIcon.Names, size);
+                        }
+                        else
+                        {
+                            return GetIconData(icon.ToString(), size);
+                        }
+                    }
+                }
+            }
+            catch (GLib.GException ex)
+            {
+                _logger.LogWarning(ex, "error while loading desktop entry {0}", desktopEntryName);
+            }
+            return null;
         }
 
         private byte[]? GetDataFromImagePath(string imagePath, int size)
@@ -212,8 +258,8 @@ namespace WslNotifyd.NotificationBuilders
                 }
                 try
                 {
-                    using var image = new Gdk.Pixbuf(absPath);
-                    return image.SaveToBuffer("png");
+                    using var pixbuf = new Gdk.Pixbuf(absPath);
+                    return pixbuf.SaveToBuffer("png");
                 }
                 catch (GLib.GException ex)
                 {
@@ -379,6 +425,14 @@ namespace WslNotifyd.NotificationBuilders
                 if (appIconData != null)
                 {
                     AddImageData(binding, appIconData, new() { { "placement", "appLogoOverride" }, });
+                }
+            }
+            else if (TryGetHintValue<string>(Hints, "desktop-entry", out var desktopEntryName))
+            {
+                var desktopEntryIconData = GetIconDataFromDesktopEntryName(desktopEntryName, 96);
+                if (desktopEntryIconData != null)
+                {
+                    AddImageData(binding, desktopEntryIconData, new() { { "placement", "appLogoOverride" }, });
                 }
             }
 
