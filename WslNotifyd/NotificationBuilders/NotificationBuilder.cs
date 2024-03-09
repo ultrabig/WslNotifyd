@@ -296,7 +296,7 @@ namespace WslNotifyd.NotificationBuilders
                 _logger.LogWarning("bits_per_sample != 8");
                 return null;
             }
-            if (data.width * data.channels != data.rowstride)
+            if (data.rowstride != data.width * data.channels)
             {
                 _logger.LogWarning("the rowstride is invalid");
                 return null;
@@ -397,14 +397,12 @@ namespace WslNotifyd.NotificationBuilders
                         inputs.Add(input);
                         attrs["hint-inputId"] = id;
                     }
-
-                    if (actionId == "default")
+                    else if (actionId == "default")
                     {
                         _logger.LogInformation("default key found, not adding a button");
                         continue;
                     }
-
-                    if (actionId == "settings")
+                    else if (actionId == "settings")
                     {
                         attrs["placement"] = "contextMenu";
                     }
