@@ -106,7 +106,7 @@ namespace WslNotifyd.DBus
 
         public Task<(string name, string vendor, string version, string specVersion)> GetServerInformationAsync()
         {
-            return Task.FromResult(("wsl-notifyd", "WSL", "0.0.1", "1.2"));
+            return Task.FromResult(("WslNotifyd", "WSL", "0.0.1", "1.2"));
         }
 
         public async Task<uint> NotifyAsync(string AppName, uint ReplacesId, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout)
