@@ -358,6 +358,11 @@ namespace WslNotifyd.NotificationBuilders
                         continue;
                     }
 
+                    if (actionId == "settings")
+                    {
+                        attrs["placement"] = "contextMenu";
+                    }
+
                     var action = CreateAction(actionsElement, actionId, actionText, actionIcons, attrs);
                     actions.Add(action);
                 }
