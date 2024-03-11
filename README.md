@@ -39,9 +39,9 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```
 - Actions
     ```sh
-    notify-send -A action1=aaa foo
+    notify-send -A 'action1=aaa' foo
     # with icons
-    notify-send -h boolean:action-icons:true -A action1=firefox foo
+    notify-send -h 'boolean:action-icons:true' -A 'firefox=Firefox' foo
     ```
 - Urgency (critical only)
     ```sh

@@ -38,12 +38,13 @@ namespace WslNotifyd.NotificationBuilders
             var content = action;
             if (actionIcons)
             {
-                var actionIconData = GetIconData(action, 48);
+                var actionIconData = GetIconData(actionId, 48);
                 if (actionIconData != null)
                 {
                     var hashString = GetHashString(actionIconData);
                     _data[hashString] = actionIconData;
                     el.SetAttribute("imageUri", hashString);
+                    el.SetAttribute("alt", action);
                     content = "";
                 }
             }
@@ -363,18 +364,19 @@ namespace WslNotifyd.NotificationBuilders
             AddText(binding, FilterXMLTag(Body));
             AddText(binding, AppName, new() { { "placement", "attribution" }, });
 
-            if (!TryGetHintValue<bool>(Hints, "action-icons", out var actionIcons))
-            {
-                actionIcons = false;
-            }
-
-            var inlineReplyAdded = false;
             if (Actions.Length > 1)
             {
                 var actionsElement = _doc.CreateElement("actions");
                 var inputs = new List<XmlElement>();
                 var actions = new List<XmlElement>();
-                for (uint i = 0; i + 1 < Actions.Length; i += 2)
+
+                if (!TryGetHintValue<bool>(Hints, "action-icons", out var actionIcons))
+                {
+                    actionIcons = false;
+                }
+                var inlineReplyAdded = false;
+
+                for (int i = 0; i + 1 < Actions.Length; i += 2)
                 {
                     var actionId = Actions[i];
                     var actionText = Actions[i + 1];
