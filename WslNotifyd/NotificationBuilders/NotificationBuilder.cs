@@ -44,7 +44,6 @@ namespace WslNotifyd.NotificationBuilders
                     var hashString = GetHashString(actionIconData);
                     _data[hashString] = actionIconData;
                     el.SetAttribute("imageUri", hashString);
-                    el.SetAttribute("alt", action);
                     content = "";
                 }
             }
