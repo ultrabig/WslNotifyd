@@ -419,15 +419,17 @@ namespace WslNotifyd.NotificationBuilders
                 toast.AppendChild(actionsElement);
             }
 
+            var iconAdded = false;
             if (!string.IsNullOrEmpty(AppIcon))
             {
                 var appIconData = GetDataFromImagePath(AppIcon, 96);
                 if (appIconData != null)
                 {
                     AddImageData(binding, appIconData, new() { { "placement", "appLogoOverride" }, });
+                    iconAdded = true;
                 }
             }
-            else if (TryGetHintValue<string>(Hints, "desktop-entry", out var desktopEntryName))
+            if (!iconAdded && TryGetHintValue<string>(Hints, "desktop-entry", out var desktopEntryName))
             {
                 var desktopEntryIconData = GetIconDataFromDesktopEntryName(desktopEntryName, 96);
                 if (desktopEntryIconData != null)
