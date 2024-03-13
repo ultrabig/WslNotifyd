@@ -39,8 +39,8 @@ internal class Program
         stdin.Close();
         var data = ms.ToArray();
         var msg = CertificateMessage.Parser.ParseFrom(data);
-        var serverCert = new X509Certificate2(msg.ServerCertificate.ToArray());
-        var clientCert = new X509Certificate2(msg.ClientCertificate.ToArray());
+        var serverCert = new X509Certificate2(msg.ServerCertificate.ToByteArray());
+        var clientCert = new X509Certificate2(msg.ClientCertificate.ToByteArray());
         return (serverCert, clientCert);
     }
 
