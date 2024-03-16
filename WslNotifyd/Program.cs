@@ -38,7 +38,10 @@ internal class Program
         // req.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(new OidCollection { new Oid("1.3.6.1.5.5.7.3.2") }, true));
         // req.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(new OidCollection { new Oid("1.3.6.1.5.5.7.3.8") }, true));
         req.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(req.PublicKey, false));
-        using var clientCertPublic = req.Create(serverCert, now.AddDays(-2), now.AddDays(365), new byte[] { 1, 2, 3, 4 });
+        var rnd = new Random();
+        var serial = new byte[4];
+        rnd.NextBytes(serial);
+        using var clientCertPublic = req.Create(serverCert, now.AddDays(-2), now.AddDays(365), serial);
         var clientCert = clientCertPublic.CopyWithPrivateKey(rsa);
 
         // File.WriteAllBytes("./server.pfx", serverCert.Export(X509ContentType.Pfx));
