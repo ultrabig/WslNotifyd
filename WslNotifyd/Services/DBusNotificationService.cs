@@ -10,7 +10,6 @@ namespace WslNotifyd.Services
 
         private Connection? _conn = null;
 
-
         private const string serviceName = "org.freedesktop.Notifications";
 
         public async Task StartAsync(CancellationToken cancellationToken)

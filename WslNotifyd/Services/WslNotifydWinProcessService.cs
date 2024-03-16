@@ -5,12 +5,48 @@ using Microsoft.AspNetCore.Http.Features;
 
 namespace WslNotifyd.Services
 {
-    public class WslNotifydWinProcessService(ILogger<WslNotifydWinProcessService> logger, IHostApplicationLifetime lifetime, IServer server, ProcessStartInfo psi, byte[]? stdin = null) : BackgroundService
+    public class WslNotifydWinProcessService : BackgroundService, IDisposable
     {
+        private readonly ILogger<WslNotifydWinProcessService> _logger;
+        private readonly IHostApplicationLifetime _lifetime;
+        private readonly IServer _server;
+        private readonly ProcessStartInfo _psi;
+        private readonly byte[]? _stdin;
+        private readonly HashSet<uint> _notificationIds = [];
+        private readonly ManualResetEventSlim _running = new ManualResetEventSlim();
+        private readonly ManualResetEventSlim _stopped = new ManualResetEventSlim(true);
+        private Task? _stopTask;
+        private CancellationTokenSource? _cancelStop;
+        private Process? _proc;
+
+        public WslNotifydWinProcessService(ILogger<WslNotifydWinProcessService> logger, IHostApplicationLifetime lifetime, IServer server, ProcessStartInfo psi, byte[]? stdin = null)
+        {
+            _logger = logger;
+            _lifetime = lifetime;
+            _server = server;
+            _psi = psi;
+            _stdin = stdin;
+        }
+
+        public override void Dispose()
+        {
+            try
+            {
+                _running.Dispose();
+
+                _proc?.Dispose();
+                _proc = null;
+            }
+            finally
+            {
+                base.Dispose();
+            }
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var startTcs = new TaskCompletionSource();
-            lifetime.ApplicationStarted.Register(startTcs.SetResult);
+            _lifetime.ApplicationStarted.Register(startTcs.SetResult);
             var stopTcs = new TaskCompletionSource();
             stoppingToken.Register(stopTcs.SetResult);
 
@@ -20,61 +56,136 @@ namespace WslNotifyd.Services
                 return;
             }
 
-            var addressFeature = server.Features.GetRequiredFeature<IServerAddressesFeature>();
+            var addressFeature = _server.Features.GetRequiredFeature<IServerAddressesFeature>();
             var address = addressFeature.Addresses.ElementAt(0);
-            psi.ArgumentList.Add(address);
+            _psi.ArgumentList.Add(address);
 
-            using var proc = Process.Start(psi);
-            if (proc == null)
+            _lifetime.ApplicationStopping.Register(HandleStopping);
+
+            while (!_lifetime.ApplicationStopping.IsCancellationRequested)
             {
-                logger.LogError("error in executing subprocess");
-                lifetime.StopApplication();
+                try
+                {
+                    // wrap in Task for starting up to progress
+                    await Task.Run(() =>
+                    {
+                        _running.Wait(_lifetime.ApplicationStopping);
+                        _stopped.Reset();
+                    }, _lifetime.ApplicationStopping);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("stopping");
+                    return;
+                }
+                await RunProcess();
+            }
+        }
+
+        public async Task RequestStart(uint id, CancellationToken cancellationToken = default)
+        {
+            if (_lifetime.ApplicationStopping.IsCancellationRequested)
+            {
                 return;
             }
-
-            lifetime.ApplicationStopping.Register(() =>
+            _cancelStop?.Cancel();
+            _notificationIds.Add(id);
+            if (_running.IsSet)
             {
-                proc.Kill(true);
-            });
-
-            proc.EnableRaisingEvents = true;
-            proc.Exited += HandleExited;
-            if (psi.RedirectStandardOutput)
-            {
-                proc.OutputDataReceived += HandleDataReceived;
-                proc.BeginOutputReadLine();
+                return;
             }
-            if (psi.RedirectStandardError)
+            await Task.Run(() =>
             {
-                proc.ErrorDataReceived += HandleErrorReceived;
-                proc.BeginErrorReadLine();
+                _stopped.Wait(cancellationToken);
+            }, cancellationToken);
+            _running.Set();
+        }
+
+        public void NotificationHandled(uint id)
+        {
+            _notificationIds.Remove(id);
+            if (_notificationIds.Count > 0)
+            {
+                return;
             }
-            if (psi.RedirectStandardInput)
+            _cancelStop?.Cancel();
+            _cancelStop = new CancellationTokenSource();
+            // TODO: make the timeout to configurable
+            _stopTask = Task.Delay(10000, _cancelStop.Token).ContinueWith((ta) =>
             {
-                if (stdin != null)
+                if (ta.IsCanceled)
                 {
-                    proc.StandardInput.BaseStream.Write(stdin);
+                    return;
                 }
-                proc.StandardInput.Close();
-                proc.StandardInput.Dispose();
+                if (ta.IsFaulted)
+                {
+                    throw ta.Exception;
+                }
+                _logger.LogInformation("shutting down...");
+                _proc?.Kill(true);
+            });
+        }
+
+        private async Task RunProcess()
+        {
+            _proc = Process.Start(_psi);
+            if (_proc == null)
+            {
+                _logger.LogError("error in executing subprocess");
+                _lifetime.StopApplication();
+                return;
+            }
+            _logger.LogInformation("process started");
+
+            _proc.EnableRaisingEvents = true;
+            _proc.Exited += HandleExited;
+            if (_psi.RedirectStandardOutput)
+            {
+                _proc.OutputDataReceived += HandleDataReceived;
+                _proc.BeginOutputReadLine();
+            }
+            if (_psi.RedirectStandardError)
+            {
+                _proc.ErrorDataReceived += HandleErrorReceived;
+                _proc.BeginErrorReadLine();
+            }
+            if (_psi.RedirectStandardInput)
+            {
+                if (_stdin != null)
+                {
+                    _proc.StandardInput.BaseStream.Write(_stdin);
+                }
+                _proc.StandardInput.Close();
+                _proc.StandardInput.Dispose();
             }
 
-            await proc.WaitForExitAsync();
+            await _proc.WaitForExitAsync();
+            _proc.Dispose();
+            _proc = null;
+        }
+
+        private void HandleStopping()
+        {
+            _logger.LogInformation("stopping process");
+            _proc?.Kill(true);
         }
 
         private void HandleDataReceived(object? sender, DataReceivedEventArgs e)
         {
-            logger.LogInformation("stdout: {0}", e.Data);
+            _logger.LogInformation("stdout: {0}", e.Data);
         }
 
         private void HandleErrorReceived(object? sender, DataReceivedEventArgs e)
         {
-            logger.LogInformation("stderr: {0}", e.Data);
+            _logger.LogInformation("stderr: {0}", e.Data);
         }
 
         private void HandleExited(object? sender, EventArgs e)
         {
-            lifetime.StopApplication();
+            _logger.LogInformation("process exited");
+            _notificationIds.Clear();
+            _running.Reset();
+            _stopped.Set();
         }
     }
 }

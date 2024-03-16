@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Tmds.DBus;
 using WslNotifyd.NotificationBuilders;
+using WslNotifyd.Services;
 
 [assembly: InternalsVisibleTo(Tmds.DBus.Connection.DynamicAssemblyName)]
 namespace WslNotifyd.DBus
@@ -18,61 +19,72 @@ namespace WslNotifyd.DBus
         Task<IDisposable> WatchNotificationRepliedAsync(Action<(uint id, string text)> handler, Action<Exception>? onError = null);
     }
 
-    class Notifications : INotifications
+    class Notifications : INotifications, IDisposable
     {
         private readonly ILogger<Notifications> _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly WslNotifydWinProcessService _notifydWinService;
         private volatile uint _sequence = 0;
         public ObjectPath ObjectPath => new("/org/freedesktop/Notifications");
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
         public event Action<(uint id, string text)>? OnReply;
 
-        private readonly TaskCompletionSource WaitFirstOnCloseNotification = new TaskCompletionSource();
+        private readonly ManualResetEventSlim WaitFirstOnCloseNotification = new ManualResetEventSlim();
         private event Func<Notifications, CloseNotificationEventArgs, Task>? _OnCloseNotification;
         public event Func<Notifications, CloseNotificationEventArgs, Task>? OnCloseNotification
         {
             add
             {
                 _OnCloseNotification += value;
-                if (!WaitFirstOnCloseNotification.Task.IsCompleted)
-                {
-                    WaitFirstOnCloseNotification.TrySetResult();
-                }
+                WaitFirstOnCloseNotification.Set();
             }
             remove
             {
+                if (_OnCloseNotification?.GetInvocationList().Length == 1)
+                {
+                    WaitFirstOnCloseNotification.Reset();
+                }
                 _OnCloseNotification -= value;
             }
         }
 
-        private readonly TaskCompletionSource WaitFirstOnNotify = new TaskCompletionSource();
+        private readonly ManualResetEventSlim WaitFirstOnNotify = new ManualResetEventSlim();
         private event Func<Notifications, NotifyEventArgs, Task<uint>>? _OnNotify;
         public event Func<Notifications, NotifyEventArgs, Task<uint>>? OnNotify
         {
             add
             {
                 _OnNotify += value;
-                if (!WaitFirstOnNotify.Task.IsCompleted)
-                {
-                    WaitFirstOnNotify.TrySetResult();
-                }
+                WaitFirstOnNotify.Set();
             }
             remove
             {
+                if (_OnNotify?.GetInvocationList().Length == 1)
+                {
+                    WaitFirstOnNotify.Reset();
+                }
                 _OnNotify -= value;
             }
         }
 
-        public Notifications(ILogger<Notifications> logger, IServiceProvider serviceProvider)
+        public Notifications(ILogger<Notifications> logger, IServiceProvider serviceProvider, WslNotifydWinProcessService notifydWinService)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
+            _notifydWinService = notifydWinService;
+        }
+
+        public void Dispose()
+        {
+            WaitFirstOnCloseNotification.Dispose();
+            WaitFirstOnNotify.Dispose();
         }
 
         public async Task CloseNotificationAsync(uint Id)
         {
-            await WaitFirstOnCloseNotification.Task;
+            await _notifydWinService.RequestStart(Id);
+            WaitFirstOnCloseNotification.Wait();
             var task = _OnCloseNotification?.Invoke(this, new CloseNotificationEventArgs()
             {
                 NotificationId = Id,
@@ -126,8 +138,9 @@ namespace WslNotifyd.DBus
             {
                 notificationId = ReplacesId;
             }
+            await _notifydWinService.RequestStart(notificationId);
 
-            await WaitFirstOnNotify.Task;
+            WaitFirstOnNotify.Wait();
             var task = _OnNotify?.Invoke(this, new NotifyEventArgs()
             {
                 NotificationXml = doc.OuterXml,
@@ -158,16 +171,19 @@ namespace WslNotifyd.DBus
 
         public void FireOnClose(uint id, uint reason)
         {
+            _notifydWinService.NotificationHandled(id);
             OnClose?.Invoke((id, reason));
         }
 
         public void FireOnAction(uint id, string actionKey)
         {
+            _notifydWinService.NotificationHandled(id);
             OnAction?.Invoke((id, actionKey));
         }
 
         public void FireOnReply(uint id, string text)
         {
+            _notifydWinService.NotificationHandled(id);
             OnReply?.Invoke((id, text));
         }
 

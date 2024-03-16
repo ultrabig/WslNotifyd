@@ -61,7 +61,7 @@ internal class Program
         var notifydWinPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "WslNotifydWin/WslNotifydWin.exe");
         var workingDirectory = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "WslNotifydWin");
 #endif
-        builder.Services.AddSingleton<IHostedService>(serviceProvider =>
+        builder.Services.AddSingleton(serviceProvider =>
         {
             var logger = serviceProvider.GetRequiredService<ILogger<WslNotifydWinProcessService>>();
             var lifetime = serviceProvider.GetRequiredService<IHostApplicationLifetime>();
@@ -87,6 +87,10 @@ internal class Program
             var stdin = msg.ToByteArray();
 
             return new WslNotifydWinProcessService(logger, lifetime, server, psi, stdin);
+        });
+        builder.Services.AddSingleton<IHostedService>(serviceProvider =>
+        {
+            return serviceProvider.GetRequiredService<WslNotifydWinProcessService>();
         });
         builder.Services.AddGrpc();
         builder.Services.AddSingleton<IHostedService, DBusNotificationService>();
