@@ -30,6 +30,14 @@ namespace WslNotifydWin.GrpcServices.Base
 
         protected abstract Task UnregisterEventHandlerAsync();
 
+        protected async Task WriteStream(TRequest message)
+        {
+            if (streamingCall != null)
+            {
+                await streamingCall.RequestStream.WriteAsync(message);
+            }
+        }
+
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             _cts = new CancellationTokenSource();

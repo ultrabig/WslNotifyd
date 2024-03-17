@@ -32,14 +32,11 @@ namespace WslNotifydWin.GrpcServices
 
         private void HandleClose((uint id, uint reason) arg)
         {
-            if (streamingCall != null)
+            WriteStream(new NotificationClosedRequest()
             {
-                streamingCall.RequestStream.WriteAsync(new NotificationClosedRequest()
-                {
-                    NotificationId = arg.id,
-                    Reason = arg.reason,
-                }).Wait();
-            }
+                NotificationId = arg.id,
+                Reason = arg.reason,
+            }).Wait();
         }
     }
 }

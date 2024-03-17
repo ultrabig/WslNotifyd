@@ -31,14 +31,11 @@ namespace WslNotifydWin.GrpcServices
 
         private void HandleAction((uint id, string actionKey) arg)
         {
-            if (streamingCall != null)
+            WriteStream(new ActionInvokedRequest()
             {
-                streamingCall.RequestStream.WriteAsync(new ActionInvokedRequest()
-                {
-                    NotificationId = arg.id,
-                    ActionKey = arg.actionKey,
-                }).Wait();
-            }
+                NotificationId = arg.id,
+                ActionKey = arg.actionKey,
+            }).Wait();
         }
     }
 }

@@ -30,14 +30,11 @@ namespace WslNotifydWin.GrpcServices
 
         private void HandleReplied((uint id, string text) arg)
         {
-            if (streamingCall != null)
+            WriteStream(new NotificationRepliedRequest()
             {
-                streamingCall.RequestStream.WriteAsync(new NotificationRepliedRequest()
-                {
-                    NotificationId = arg.id,
-                    Text = arg.text,
-                }).Wait();
-            }
+                NotificationId = arg.id,
+                Text = arg.text,
+            }).Wait();
         }
     }
 }
