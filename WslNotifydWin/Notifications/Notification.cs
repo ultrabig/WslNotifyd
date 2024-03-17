@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
@@ -10,15 +11,17 @@ namespace WslNotifydWin.Notifications
     {
         private readonly ILogger<Notification> _logger;
         private readonly ToastNotifier _notifier;
+        private readonly IHostApplicationLifetime _lifetime;
         private readonly ConcurrentDictionary<string, ToastNotification> _toastHistory = new();
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
         public event Action<(uint id, string text)>? OnReply;
 
-        public Notification(string aumId, ILogger<Notification> logger)
+        public Notification(string aumId, ILogger<Notification> logger, IHostApplicationLifetime lifetime)
         {
             _notifier = ToastNotificationManager.CreateToastNotifier(aumId);
             _logger = logger;
+            _lifetime = lifetime;
         }
 
         public Task CloseNotificationAsync(uint Id)
@@ -52,65 +55,78 @@ namespace WslNotifydWin.Notifications
                 _logger.LogWarning(ex, "error while saving images");
             }
 
-            // FIXME: is there a better way?
-            Task.Delay(5000).ContinueWith(_ =>
+            var imageDeletionDelay = 100;
+            try
             {
-                try
+                var nodesToRemove = new List<IXmlNode>();
+                void replaceSrc(string xpath, string attr)
                 {
-                    foreach (var uri in savedNotificationData.Values)
+                    foreach (var element in doc.SelectNodes(xpath).Cast<XmlElement>())
                     {
-                        File.Delete(uri.AbsolutePath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "error while deleting images");
-                }
-            });
-
-            var nodesToRemove = new List<IXmlNode>();
-            void replaceSrc(string xpath, string attr)
-            {
-                foreach (var element in doc.SelectNodes(xpath).Cast<XmlElement>())
-                {
-                    var found = false;
-                    var src = element.GetAttribute(attr);
-                    if (src != null)
-                    {
-                        foreach (var (hashString, localFileUri) in savedNotificationData)
+                        var found = false;
+                        var src = element.GetAttribute(attr);
+                        if (src != null)
                         {
-                            if (hashString == src)
+                            foreach (var (hashString, localFileUri) in savedNotificationData)
                             {
-                                element.SetAttribute(attr, localFileUri.ToString());
-                                found = true;
-                                break;
+                                if (hashString == src)
+                                {
+                                    element.SetAttribute(attr, localFileUri.ToString());
+                                    found = true;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    if (!found)
-                    {
-                        nodesToRemove.Add(element);
+                        if (!found)
+                        {
+                            nodesToRemove.Add(element);
+                        }
                     }
                 }
+                replaceSrc("//image", "src");
+                replaceSrc("//action[@imageUri]", "imageUri");
+                foreach (var node in nodesToRemove)
+                {
+                    node.ParentNode.RemoveChild(node);
+                }
+
+                var notif = new ToastNotification(doc)
+                {
+                    Tag = notificationId.ToString(),
+                };
+
+                notif.Activated += HandleActivated;
+                notif.Dismissed += HandleDismissed;
+
+                _notifier.Show(notif);
+
+                _toastHistory[notif.Tag] = notif;
             }
-            replaceSrc("//image", "src");
-            replaceSrc("//action[@imageUri]", "imageUri");
-            foreach (var node in nodesToRemove)
+            catch (Exception ex)
             {
-                node.ParentNode.RemoveChild(node);
+                _logger.LogWarning(ex, "error when showing notification {0}", notificationId);
+                imageDeletionDelay = 0;
+                throw;
             }
-
-            var notif = new ToastNotification(doc)
+            finally
             {
-                Tag = notificationId.ToString(),
-            };
-
-            notif.Activated += HandleActivated;
-            notif.Dismissed += HandleDismissed;
-
-            _notifier.Show(notif);
-
-            _toastHistory[notif.Tag] = notif;
+                var stopTcs = new TaskCompletionSource();
+                _lifetime.ApplicationStopping.Register(stopTcs.SetResult);
+                Task.WhenAny(Task.Delay(imageDeletionDelay), stopTcs.Task).ContinueWith(_ =>
+                {
+                    try
+                    {
+                        foreach (var uri in savedNotificationData.Values)
+                        {
+                            File.Delete(uri.AbsolutePath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "error while deleting images");
+                    }
+                });
+            }
             return Task.FromResult(notificationId);
         }
 

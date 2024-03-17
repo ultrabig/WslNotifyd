@@ -108,7 +108,8 @@ internal class Program
         builder.Services.AddSingleton(serviceProvider =>
         {
             var logger = serviceProvider.GetRequiredService<ILogger<Notification>>();
-            return new Notification(aumId, logger);
+            var lifetime = serviceProvider.GetRequiredService<IHostApplicationLifetime>();
+            return new Notification(aumId, logger, lifetime);
         });
         builder.Services.AddSingleton<IHostedService, ActionInvokedSignalService>();
         builder.Services.AddSingleton<IHostedService, NotificationClosedSignalService>();
