@@ -3,6 +3,7 @@ using Grpc.Core;
 using GrpcNotification;
 using Microsoft.Extensions.Logging;
 using WslNotifyd.DBus;
+using WslNotifyd.Services;
 
 namespace WslNotifyd.GrpcServices
 {
@@ -10,12 +11,14 @@ namespace WslNotifyd.GrpcServices
     {
         private readonly ILogger<NotifierService> _logger;
         private readonly Notifications _notifications;
+        private readonly WslNotifydWinProcessService _processService;
         private volatile uint _notifySerial = 0;
         private volatile uint _closeNotificationSerial = 0;
-        public NotifierService(ILogger<NotifierService> logger, Notifications notifications)
+        public NotifierService(ILogger<NotifierService> logger, Notifications notifications, WslNotifydWinProcessService processService)
         {
             _logger = logger;
             _notifications = notifications;
+            _processService = processService;
         }
 
         public override async Task CloseNotification(IAsyncStreamReader<CloseNotificationRequest> requestStream, IServerStreamWriter<CloseNotificationReply> responseStream, ServerCallContext context)
@@ -59,6 +62,10 @@ namespace WslNotifyd.GrpcServices
                         watcher.FireEvent(request);
                     }
                 }
+            }
+            catch (IOException ex)
+            {
+                _logger.LogInformation(ex, "connection stopped");
             }
             finally
             {
@@ -114,6 +121,10 @@ namespace WslNotifyd.GrpcServices
                     }
                 }
             }
+            catch (IOException ex)
+            {
+                _logger.LogInformation(ex, "connection stopped");
+            }
             finally
             {
                 _notifications.OnNotify -= handleNotify;
@@ -122,29 +133,70 @@ namespace WslNotifyd.GrpcServices
 
         public override async Task<NotificationClosedReply> NotificationClosed(IAsyncStreamReader<NotificationClosedRequest> requestStream, ServerCallContext context)
         {
-            await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
+            try
             {
-                _notifications.FireOnClose(request.NotificationId, request.Reason);
+                await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
+                {
+                    _notifications.FireOnClose(request.NotificationId, request.Reason);
+                }
+            }
+            catch (IOException ex)
+            {
+                _logger.LogInformation(ex, "connection stopped");
             }
             return new NotificationClosedReply();
         }
 
         public override async Task<ActionInvokedReply> ActionInvoked(IAsyncStreamReader<ActionInvokedRequest> requestStream, ServerCallContext context)
         {
-            await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
+            try
             {
-                _notifications.FireOnAction(request.NotificationId, request.ActionKey);
+                await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
+                {
+                    _notifications.FireOnAction(request.NotificationId, request.ActionKey);
+                }
+            }
+            catch (IOException ex)
+            {
+                _logger.LogInformation(ex, "connection stopped");
             }
             return new ActionInvokedReply();
         }
 
         public override async Task<NotificationRepliedReply> NotificationReplied(IAsyncStreamReader<NotificationRepliedRequest> requestStream, ServerCallContext context)
         {
-            await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
+            try
             {
-                _notifications.FireOnReply(request.NotificationId, request.Text);
+                await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
+                {
+                    _notifications.FireOnReply(request.NotificationId, request.Text);
+                }
+            }
+            catch (IOException ex)
+            {
+                _logger.LogInformation(ex, "connection stopped");
             }
             return new NotificationRepliedReply();
+        }
+
+        public override async Task Shutdown(ShutdownRequest request, IServerStreamWriter<ShutdownReply> responseStream, ServerCallContext context)
+        {
+            void HandleShutdownRequest()
+            {
+                responseStream.WriteAsync(new ShutdownReply()).Wait();
+            }
+            _processService.OnShutdownRequest += HandleShutdownRequest;
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, context.CancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+            finally
+            {
+                _processService.OnShutdownRequest -= HandleShutdownRequest;
+            }
         }
 
         private class EventWatcher<T>

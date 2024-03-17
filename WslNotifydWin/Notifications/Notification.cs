@@ -117,7 +117,7 @@ namespace WslNotifydWin.Notifications
         private void HandleActivated(ToastNotification sender, object args)
         {
             _logger.LogInformation("notification {0} has been activated", sender.Tag);
-            string actionKey = "default";
+            var actionKey = "default";
             const uint reason = 2;
             var id = uint.Parse(sender.Tag);
             if (args is ToastActivatedEventArgs eventArgs)

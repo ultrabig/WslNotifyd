@@ -38,22 +38,29 @@ namespace WslNotifydWin.GrpcServices.Base
             _cts = new CancellationTokenSource();
             _readingTask = Task.Run(async () =>
             {
-                await foreach (var response in streamingCall.ResponseStream.ReadAllAsync(_cts.Token))
+                try
                 {
-                    TRequest? req = null;
-                    try
+                    await foreach (var response in streamingCall.ResponseStream.ReadAllAsync(_cts.Token))
                     {
-                        req = await HandleResponseAsync(response, _cts.Token);
+                        TRequest? req = null;
+                        try
+                        {
+                            req = await HandleResponseAsync(response, _cts.Token);
+                        }
+                        catch (Exception ex)
+                        {
+                            var errorReq = await HandleErrorAsync(response, ex, _cts.Token);
+                            await streamingCall.RequestStream.WriteAsync(errorReq);
+                        }
+                        if (req != null)
+                        {
+                            await streamingCall.RequestStream.WriteAsync(req);
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        var errorReq = await HandleErrorAsync(response, ex, _cts.Token);
-                        await streamingCall.RequestStream.WriteAsync(errorReq);
-                    }
-                    if (req != null)
-                    {
-                        await streamingCall.RequestStream.WriteAsync(req);
-                    }
+                }
+                catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+                {
+                    return;
                 }
             }, cancellationToken);
         }

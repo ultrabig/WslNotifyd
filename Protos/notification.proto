@@ -10,6 +10,7 @@ service Notifier {
     rpc NotificationClosed (stream NotificationClosedRequest) returns (NotificationClosedReply);
     rpc ActionInvoked (stream ActionInvokedRequest) returns (ActionInvokedReply);
     rpc NotificationReplied (stream NotificationRepliedRequest) returns (NotificationRepliedReply);
+    rpc Shutdown (ShutdownRequest) returns (stream ShutdownReply);
 }
 
 message CloseNotificationRequest {
@@ -67,4 +68,10 @@ message ClientError {
 message CertificateMessage {
     bytes server_certificate = 1;
     bytes client_certificate = 2;
+}
+
+message ShutdownRequest {
+}
+
+message ShutdownReply {
 }

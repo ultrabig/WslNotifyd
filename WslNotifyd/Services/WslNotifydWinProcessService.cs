@@ -18,6 +18,7 @@ namespace WslNotifyd.Services
         private Task? _stopTask;
         private CancellationTokenSource? _cancelStop;
         private Process? _proc;
+        public event Action? OnShutdownRequest;
 
         public WslNotifydWinProcessService(ILogger<WslNotifydWinProcessService> logger, IHostApplicationLifetime lifetime, IServer server, ProcessStartInfo psi, byte[]? stdin = null)
         {
@@ -75,7 +76,6 @@ namespace WslNotifyd.Services
                 }
                 catch (OperationCanceledException)
                 {
-                    _logger.LogInformation("stopping");
                     return;
                 }
                 await RunProcess();
@@ -111,7 +111,7 @@ namespace WslNotifyd.Services
             _cancelStop?.Cancel();
             _cancelStop = new CancellationTokenSource();
             // TODO: make the timeout to configurable
-            _stopTask = Task.Delay(10000, _cancelStop.Token).ContinueWith((ta) =>
+            _stopTask = Task.Delay(10000, _cancelStop.Token).ContinueWith(async (ta) =>
             {
                 if (ta.IsCanceled)
                 {
@@ -121,8 +121,8 @@ namespace WslNotifyd.Services
                 {
                     throw ta.Exception;
                 }
-                _logger.LogInformation("shutting down...");
-                _proc?.Kill(true);
+                _logger.LogInformation("shutting down subprocess");
+                await Shutdown(false);
             });
         }
 
@@ -164,10 +164,57 @@ namespace WslNotifyd.Services
             _proc = null;
         }
 
+        private async Task KillWait(CancellationToken cancellationToken = default)
+        {
+            _proc?.Kill(true);
+            await Task.Run(() =>
+            {
+                _stopped.Wait(cancellationToken);
+            }, cancellationToken);
+        }
+
+        private async Task Shutdown(bool forceKillAndReturn, CancellationToken cancellationToken = default)
+        {
+            if (_proc == null || _proc.HasExited)
+            {
+                return;
+            }
+            if (forceKillAndReturn)
+            {
+                _logger.LogWarning("force kill");
+                _proc?.Kill(true);
+                return;
+            }
+
+            if (OnShutdownRequest == null || OnShutdownRequest.GetInvocationList().Length == 0)
+            {
+                _logger.LogWarning("cannot gracefully shutdown, force kill");
+                await KillWait(cancellationToken);
+                return;
+            }
+
+            try
+            {
+                _logger.LogInformation("gracefully shut down");
+                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                OnShutdownRequest.Invoke();
+                // TODO: make the timeout to configurable
+                cts.CancelAfter(5000);
+                await Task.Run(() =>
+                {
+                    _stopped.Wait(cts.Token);
+                }, cts.Token);
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogInformation(ex, "fall back to force kill");
+                await KillWait(cancellationToken);
+            }
+        }
+
         private void HandleStopping()
         {
-            _logger.LogInformation("stopping process");
-            _proc?.Kill(true);
+            Shutdown(false).Wait();
         }
 
         private void HandleDataReceived(object? sender, DataReceivedEventArgs e)
