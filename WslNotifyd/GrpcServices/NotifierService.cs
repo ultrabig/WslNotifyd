@@ -199,6 +199,12 @@ namespace WslNotifyd.GrpcServices
             }
         }
 
+        public override Task<MessageDurationReply> MessageDurationChanged(MessageDurationRequest request, ServerCallContext context)
+        {
+            _notifications.NotificationDuration = request.MessageDuration;
+            return Task.FromResult(new MessageDurationReply());
+        }
+
         private class EventWatcher<T>
         {
             public event Action<T>? OnEventOccured;

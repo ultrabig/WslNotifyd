@@ -353,7 +353,7 @@ namespace WslNotifyd.NotificationBuilders
             _data.Clear();
         }
 
-        public (XmlDocument, IDictionary<string, byte[]>) Build(string AppName, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout)
+        public (XmlDocument, IDictionary<string, byte[]>) Build(string AppName, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout, uint NotificationDuration)
         {
             Clear();
             var toast = (XmlElement)_doc.SelectSingleNode("//toast[1]")!;
@@ -486,12 +486,11 @@ namespace WslNotifyd.NotificationBuilders
                 toast.SetAttribute("scenario", "urgent");
             }
 
-            // TODO: 5 is configurable on Windows
-            if (ExpireTimeout > 0 && ExpireTimeout <= 5)
+            if (ExpireTimeout > 0 && ExpireTimeout <= NotificationDuration)
             {
                 toast.SetAttribute("duration", "short");
             }
-            else if (ExpireTimeout == 0 || ExpireTimeout > 5)
+            else if (ExpireTimeout == 0 || ExpireTimeout > NotificationDuration)
             {
                 toast.SetAttribute("duration", "long");
             }

@@ -11,6 +11,7 @@ service Notifier {
     rpc ActionInvoked (stream ActionInvokedRequest) returns (ActionInvokedReply);
     rpc NotificationReplied (stream NotificationRepliedRequest) returns (NotificationRepliedReply);
     rpc Shutdown (ShutdownRequest) returns (stream ShutdownReply);
+    rpc MessageDurationChanged (MessageDurationRequest) returns (MessageDurationReply);
 }
 
 message CloseNotificationRequest {
@@ -74,4 +75,11 @@ message ShutdownRequest {
 }
 
 message ShutdownReply {
+}
+
+message MessageDurationRequest {
+    uint32 message_duration = 1;
+}
+
+message MessageDurationReply {
 }

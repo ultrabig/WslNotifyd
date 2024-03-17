@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using WslNotifydWin.Notifications;
 using WslNotifydWin.GrpcServices;
+using WslNotifydWin.Services;
 
 internal class Program
 {
@@ -117,6 +118,7 @@ internal class Program
         builder.Services.AddSingleton<IHostedService, NotifyMessageService>();
         builder.Services.AddSingleton<IHostedService, NotificationRepliedSignalService>();
         builder.Services.AddSingleton<IHostedService, ShutdownRequestService>();
+        builder.Services.AddSingleton<IHostedService, MonitorMessageDuration>();
 
         var app = builder.Build();
         app.Run();

@@ -68,6 +68,29 @@ namespace WslNotifyd.DBus
             }
         }
 
+        private readonly TaskCompletionSource WaitNotificationDuration = new TaskCompletionSource();
+        private const uint defaultDuration = 5;
+        private volatile uint _notificationDuration = defaultDuration;
+        public uint NotificationDuration
+        {
+            get => _notificationDuration;
+            set
+            {
+                if (value == 0)
+                {
+                    _notificationDuration = defaultDuration;
+                }
+                else
+                {
+                    _notificationDuration = value;
+                }
+                if (!WaitNotificationDuration.Task.IsCompleted)
+                {
+                    WaitNotificationDuration.TrySetResult();
+                }
+            }
+        }
+
         public Notifications(ILogger<Notifications> logger, IServiceProvider serviceProvider, WslNotifydWinProcessService notifydWinService)
         {
             _logger = logger;
@@ -126,8 +149,6 @@ namespace WslNotifyd.DBus
             _logger.LogInformation("app_name: {0}, replaces_id: {1}, app_icon: {2}, summary: {3}, body: {4}, actions: [{5}], hints: [{6}], expire_timeout: {7}", AppName, ReplacesId, AppIcon, Summary, Body, string.Join(", ", Actions), string.Join(", ", Hints), ExpireTimeout);
 
             var builder = new NotificationBuilder(_serviceProvider.GetRequiredService<ILogger<NotificationBuilder>>());
-            (var doc, var data) = builder.Build(AppName, AppIcon, Summary, Body, Actions, Hints, ExpireTimeout);
-
             uint notificationId;
             if (ReplacesId == 0)
             {
@@ -140,7 +161,10 @@ namespace WslNotifyd.DBus
             }
             await _notifydWinService.RequestStart(notificationId);
 
-            WaitFirstOnNotify.Wait();
+            var firstNotifyTask = Task.Run(WaitFirstOnNotify.Wait);
+            await Task.WhenAll(firstNotifyTask, WaitNotificationDuration.Task);
+
+            (var doc, var data) = builder.Build(AppName, AppIcon, Summary, Body, Actions, Hints, ExpireTimeout, NotificationDuration);
             var task = _OnNotify?.Invoke(this, new NotifyEventArgs()
             {
                 NotificationXml = doc.OuterXml,
