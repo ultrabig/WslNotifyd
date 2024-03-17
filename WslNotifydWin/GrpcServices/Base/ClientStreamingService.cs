@@ -40,13 +40,13 @@ namespace WslNotifydWin.GrpcServices.Base
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             await UnregisterEventHandlerAsync();
-            if (_cts != null)
-            {
-                _cts.Cancel();
-            }
             if (streamingCall != null)
             {
                 await streamingCall.RequestStream.CompleteAsync();
+            }
+            if (_cts != null)
+            {
+                _cts.Cancel();
             }
         }
 
