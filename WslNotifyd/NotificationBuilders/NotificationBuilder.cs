@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
@@ -318,20 +319,18 @@ namespace WslNotifyd.NotificationBuilders
             }
         }
 
-        private bool TryGetHintValue<T>(IDictionary<string, object> hints, string key, out T outValue)
+        private bool TryGetHintValue<T>(IDictionary<string, object> hints, string key, [MaybeNullWhen(false)] out T outValue)
         {
             if (hints.TryGetValue(key, out var valueObj) && valueObj is T v)
             {
                 outValue = v;
                 return true;
             }
-#pragma warning disable CS8601 // Possible null reference assignment.
             outValue = default;
-#pragma warning restore CS8601 // Possible null reference assignment.
             return false;
         }
 
-        private bool TryGetHintValue<T>(IDictionary<string, object> hints, IEnumerable<string> keys, out T outValue)
+        private bool TryGetHintValue<T>(IDictionary<string, object> hints, IEnumerable<string> keys, [MaybeNullWhen(false)] out T outValue)
         {
             foreach (var key in keys)
             {
@@ -340,9 +339,7 @@ namespace WslNotifyd.NotificationBuilders
                     return true;
                 }
             }
-#pragma warning disable CS8601 // Possible null reference assignment.
             outValue = default;
-#pragma warning restore CS8601 // Possible null reference assignment.
             return false;
         }
 

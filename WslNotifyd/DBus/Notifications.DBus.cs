@@ -211,18 +211,16 @@ namespace WslNotifyd.DBus
             OnReply?.Invoke((id, text));
         }
 
-#nullable disable
         public class CloseNotificationEventArgs : EventArgs
         {
-            public uint NotificationId { get; init; }
+            public required uint NotificationId { get; init; }
         }
 
         public class NotifyEventArgs : EventArgs
         {
-            public string NotificationXml { get; init; }
-            public uint NotificationId { get; init; }
-            public IDictionary<string, byte[]> NotificionData { get; init; }
+            public required string NotificationXml { get; init; }
+            public required uint NotificationId { get; init; }
+            public required IDictionary<string, byte[]> NotificionData { get; init; }
         }
-#nullable enable
     }
 }
