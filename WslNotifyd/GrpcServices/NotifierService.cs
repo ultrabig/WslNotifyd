@@ -131,52 +131,22 @@ namespace WslNotifyd.GrpcServices
             }
         }
 
-        public override async Task<NotificationClosedReply> NotificationClosed(IAsyncStreamReader<NotificationClosedRequest> requestStream, ServerCallContext context)
+        public override Task<NotificationClosedReply> NotificationClosed(NotificationClosedRequest request, ServerCallContext context)
         {
-            try
-            {
-                await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
-                {
-                    _notifications.FireOnClose(request.NotificationId, request.Reason);
-                }
-            }
-            catch (IOException ex)
-            {
-                _logger.LogInformation(ex, "connection stopped");
-            }
-            return new NotificationClosedReply();
+            _notifications.FireOnClose(request.NotificationId, request.Reason);
+            return Task.FromResult(new NotificationClosedReply());
         }
 
-        public override async Task<ActionInvokedReply> ActionInvoked(IAsyncStreamReader<ActionInvokedRequest> requestStream, ServerCallContext context)
+        public override Task<ActionInvokedReply> ActionInvoked(ActionInvokedRequest request, ServerCallContext context)
         {
-            try
-            {
-                await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
-                {
-                    _notifications.FireOnAction(request.NotificationId, request.ActionKey);
-                }
-            }
-            catch (IOException ex)
-            {
-                _logger.LogInformation(ex, "connection stopped");
-            }
-            return new ActionInvokedReply();
+            _notifications.FireOnAction(request.NotificationId, request.ActionKey);
+            return Task.FromResult(new ActionInvokedReply());
         }
 
-        public override async Task<NotificationRepliedReply> NotificationReplied(IAsyncStreamReader<NotificationRepliedRequest> requestStream, ServerCallContext context)
+        public override Task<NotificationRepliedReply> NotificationReplied(NotificationRepliedRequest request, ServerCallContext context)
         {
-            try
-            {
-                await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
-                {
-                    _notifications.FireOnReply(request.NotificationId, request.Text);
-                }
-            }
-            catch (IOException ex)
-            {
-                _logger.LogInformation(ex, "connection stopped");
-            }
-            return new NotificationRepliedReply();
+            _notifications.FireOnReply(request.NotificationId, request.Text);
+            return Task.FromResult(new NotificationRepliedReply());
         }
 
         public override async Task Shutdown(ShutdownRequest request, IServerStreamWriter<ShutdownReply> responseStream, ServerCallContext context)

@@ -150,16 +150,12 @@ namespace WslNotifydWin.Notifications
                         {
                             // _logger.LogInformation("UserInput => {0}: {1}", k, v);
                             OnReply?.Invoke((id, text));
-                            // FIXME: wait for the notification sender to handle the reply signal 
-                            Thread.Sleep(100);
                             break;
                         }
                     }
                 }
             }
             OnAction?.Invoke((id, actionKey));
-            // FIXME: wait for the notification sender to handle the action signal 
-            Thread.Sleep(100);
             OnClose?.Invoke((id, reason));
             _toastHistory.Remove(sender.Tag, out _);
         }

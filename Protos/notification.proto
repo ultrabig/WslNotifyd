@@ -7,9 +7,9 @@ package wslnotifyd;
 service Notifier {
     rpc CloseNotification (stream CloseNotificationRequest) returns (stream CloseNotificationReply);
     rpc Notify (stream NotifyRequest) returns (stream NotifyReply);
-    rpc NotificationClosed (stream NotificationClosedRequest) returns (NotificationClosedReply);
-    rpc ActionInvoked (stream ActionInvokedRequest) returns (ActionInvokedReply);
-    rpc NotificationReplied (stream NotificationRepliedRequest) returns (NotificationRepliedReply);
+    rpc NotificationClosed (NotificationClosedRequest) returns (NotificationClosedReply);
+    rpc ActionInvoked (ActionInvokedRequest) returns (ActionInvokedReply);
+    rpc NotificationReplied (NotificationRepliedRequest) returns (NotificationRepliedReply);
     rpc Shutdown (ShutdownRequest) returns (stream ShutdownReply);
     rpc MessageDurationChanged (MessageDurationRequest) returns (MessageDurationReply);
 }
