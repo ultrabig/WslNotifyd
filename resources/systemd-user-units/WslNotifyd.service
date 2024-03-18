@@ -5,3 +5,6 @@ Description = WslNotifyd: notification server on WSL2
 Type = dbus
 BusName = org.freedesktop.Notifications
 ExecStart = @INSTALL_PREFIX@/lib/WslNotifyd/WslNotifyd
+# The WSL2 interop process seems unable to gracefully terminate Windows processes when receiving signals,
+# so only send signals to the parent process to initiate a graceful shutdown
+KillMode = mixed
