@@ -102,7 +102,6 @@ internal class Program
                         logger.LogDebug("client check: {0}", result);
                         return result;
                     },
-                    SslProtocols = System.Security.Authentication.SslProtocols.Tls12,
                 };
             });
 

@@ -115,7 +115,6 @@ internal class Program
                     return result;
                 };
                 httpsOptions.ServerCertificate = serverCert;
-                httpsOptions.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
             });
         });
 
