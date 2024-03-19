@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -12,7 +13,7 @@ namespace WslNotifyd.Services
         private readonly IServer _server;
         private readonly ProcessStartInfo _psi;
         private readonly byte[]? _stdin;
-        private readonly HashSet<uint> _notificationIds = [];
+        private readonly ConcurrentDictionary<uint, byte> _notificationIds = [];
         private readonly ManualResetEventSlim _running = new ManualResetEventSlim();
         private readonly ManualResetEventSlim _stopped = new ManualResetEventSlim(true);
         private Task? _stopTask;
@@ -89,7 +90,7 @@ namespace WslNotifyd.Services
                 return;
             }
             _cancelStop?.Cancel();
-            _notificationIds.Add(id);
+            _notificationIds.TryAdd(id, default);
             if (_running.IsSet)
             {
                 return;
@@ -103,8 +104,8 @@ namespace WslNotifyd.Services
 
         public void NotificationHandled(uint id)
         {
-            _notificationIds.Remove(id);
-            if (_notificationIds.Count > 0)
+            _notificationIds.TryRemove(id, out _);
+            if (!_notificationIds.IsEmpty)
             {
                 return;
             }
