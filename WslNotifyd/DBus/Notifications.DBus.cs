@@ -24,7 +24,7 @@ namespace WslNotifyd.DBus
         private readonly ILogger<Notifications> _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly WslNotifydWinProcessService _notifydWinService;
-        private volatile uint _sequence = 0;
+        private uint _sequence = 0;
         public ObjectPath ObjectPath => new("/org/freedesktop/Notifications");
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
@@ -152,8 +152,7 @@ namespace WslNotifyd.DBus
             uint notificationId;
             if (ReplacesId == 0)
             {
-                Interlocked.Increment(ref _sequence);
-                notificationId = _sequence;
+                notificationId = Interlocked.Increment(ref _sequence);
             }
             else
             {
@@ -169,7 +168,7 @@ namespace WslNotifyd.DBus
             {
                 NotificationXml = doc.OuterXml,
                 NotificationId = notificationId,
-                NotificionData = data,
+                NotificationData = data,
             });
             if (task != null)
             {
@@ -220,7 +219,7 @@ namespace WslNotifyd.DBus
         {
             public required string NotificationXml { get; init; }
             public required uint NotificationId { get; init; }
-            public required IDictionary<string, byte[]> NotificionData { get; init; }
+            public required IDictionary<string, byte[]> NotificationData { get; init; }
         }
     }
 }

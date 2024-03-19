@@ -12,8 +12,8 @@ namespace WslNotifyd.GrpcServices
         private readonly ILogger<NotifierService> _logger;
         private readonly Notifications _notifications;
         private readonly WslNotifydWinProcessService _processService;
-        private volatile uint _notifySerial = 0;
-        private volatile uint _closeNotificationSerial = 0;
+        private uint _notifySerial = 0;
+        private uint _closeNotificationSerial = 0;
         public NotifierService(ILogger<NotifierService> logger, Notifications notifications, WslNotifydWinProcessService processService)
         {
             _logger = logger;
@@ -26,8 +26,7 @@ namespace WslNotifyd.GrpcServices
             var watcher = new EventWatcher<CloseNotificationRequest>();
             async Task HandleCloseNotification(Notifications sender, Notifications.CloseNotificationEventArgs args)
             {
-                var serial = _closeNotificationSerial;
-                Interlocked.Increment(ref _closeNotificationSerial);
+                var serial = Interlocked.Increment(ref _closeNotificationSerial);
                 var reply = new CloseNotificationReply()
                 {
                     NotificationId = args.NotificationId,
@@ -78,15 +77,14 @@ namespace WslNotifyd.GrpcServices
             var watcher = new EventWatcher<NotifyRequest>();
             async Task<uint> handleNotify(Notifications sender, Notifications.NotifyEventArgs args)
             {
-                var serial = _notifySerial;
-                Interlocked.Increment(ref _notifySerial);
+                var serial = Interlocked.Increment(ref _notifySerial);
                 var reply = new NotifyReply()
                 {
                     NotificationXml = args.NotificationXml,
                     NotificationId = args.NotificationId,
                     SerialId = serial,
                 };
-                foreach (var (k, v) in args.NotificionData)
+                foreach (var (k, v) in args.NotificationData)
                 {
                     reply.NotificationData.Add(k, ByteString.CopyFrom(v));
                 }
