@@ -18,6 +18,7 @@ namespace WslNotifyd.Services
         private readonly ManualResetEventSlim _stopped = new ManualResetEventSlim(true);
         private Task? _stopTask;
         private CancellationTokenSource? _cancelStop;
+        private readonly object _cancelStopLock = new object();
         private Process? _proc;
         public event Action? OnShutdownRequest;
 
@@ -104,27 +105,30 @@ namespace WslNotifyd.Services
 
         public void NotificationHandled(uint id)
         {
-            _notificationIds.TryRemove(id, out _);
-            if (!_notificationIds.IsEmpty)
+            lock (_cancelStopLock)
             {
-                return;
-            }
-            _cancelStop?.Cancel();
-            _cancelStop = new CancellationTokenSource();
-            // TODO: make the timeout to configurable
-            _stopTask = Task.Delay(10000, _cancelStop.Token).ContinueWith(async (ta) =>
-            {
-                if (ta.IsCanceled)
+                _notificationIds.TryRemove(id, out _);
+                if (!_notificationIds.IsEmpty)
                 {
                     return;
                 }
-                if (ta.IsFaulted)
+                _cancelStop?.Cancel();
+                _cancelStop = new CancellationTokenSource();
+                // TODO: make the timeout to be configurable
+                _stopTask = Task.Delay(10000, _cancelStop.Token).ContinueWith(async (ta) =>
                 {
-                    throw ta.Exception;
-                }
-                _logger.LogInformation("shutting down subprocess");
-                await Shutdown(false);
-            });
+                    if (ta.IsCanceled)
+                    {
+                        return;
+                    }
+                    if (ta.IsFaulted)
+                    {
+                        throw ta.Exception;
+                    }
+                    _logger.LogInformation("shutting down subprocess");
+                    await Shutdown(false);
+                });
+            }
         }
 
         private async Task RunProcess()
@@ -199,7 +203,7 @@ namespace WslNotifyd.Services
                 _logger.LogInformation("gracefully shut down");
                 var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 OnShutdownRequest.Invoke();
-                // TODO: make the timeout to configurable
+                // TODO: make the timeout to be configurable
                 cts.CancelAfter(5000);
                 await Task.Run(() =>
                 {
