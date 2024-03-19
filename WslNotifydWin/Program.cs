@@ -111,6 +111,10 @@ internal class Program
             var lifetime = serviceProvider.GetRequiredService<IHostApplicationLifetime>();
             return new Notification(aumId, logger, lifetime);
         });
+        builder.Services.AddSingleton<IHostedService>(serviceProvider =>
+        {
+            return serviceProvider.GetRequiredService<Notification>();
+        });
         builder.Services.AddSingleton<IHostedService, ActionInvokedSignalService>();
         builder.Services.AddSingleton<IHostedService, NotificationClosedSignalService>();
         builder.Services.AddSingleton<IHostedService, CloseNotificationMessageService>();
