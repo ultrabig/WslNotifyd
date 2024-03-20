@@ -56,7 +56,6 @@ namespace WslNotifydWin.Notifications
             if (_notifier.Setting != NotificationSetting.Enabled)
             {
                 _logger.LogError($"notification is disabled: {_notifier.Setting}");
-                _lifetime.StopApplication();
                 throw new Exception($"notification is disabled: {_notifier.Setting}");
             }
 
@@ -81,7 +80,6 @@ namespace WslNotifydWin.Notifications
             if (_notifier.Setting != NotificationSetting.Enabled)
             {
                 _logger.LogError($"notification is disabled: {_notifier.Setting}");
-                _lifetime.StopApplication();
                 throw new Exception($"notification is disabled: {_notifier.Setting}");
             }
 
