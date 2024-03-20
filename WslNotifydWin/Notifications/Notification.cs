@@ -53,11 +53,7 @@ namespace WslNotifydWin.Notifications
 
         public Task CloseNotificationAsync(uint Id)
         {
-            if (_notifier.Setting != NotificationSetting.Enabled)
-            {
-                _logger.LogError($"notification is disabled: {_notifier.Setting}");
-                throw new Exception($"notification is disabled: {_notifier.Setting}");
-            }
+            ThrowIfNotificationIsDisabled();
 
             CancelShutdown();
             _logger.LogInformation("notification {0} has been requested to close", Id);
@@ -77,11 +73,7 @@ namespace WslNotifydWin.Notifications
 
         public Task<uint> NotifyAsync(string notificationXml, uint notificationId, IDictionary<string, byte[]> notificationData)
         {
-            if (_notifier.Setting != NotificationSetting.Enabled)
-            {
-                _logger.LogError($"notification is disabled: {_notifier.Setting}");
-                throw new Exception($"notification is disabled: {_notifier.Setting}");
-            }
+            ThrowIfNotificationIsDisabled();
 
             CancelShutdown();
 
@@ -232,6 +224,15 @@ namespace WslNotifydWin.Notifications
         private void HandleTimer(object? state)
         {
             RegisterShutdown();
+        }
+
+        private void ThrowIfNotificationIsDisabled()
+        {
+            if (_notifier.Setting != NotificationSetting.Enabled)
+            {
+                _logger.LogError($"notification is disabled: {_notifier.Setting}");
+                throw new Exception($"notification is disabled: {_notifier.Setting}");
+            }
         }
 
         private void RegisterShutdown()
