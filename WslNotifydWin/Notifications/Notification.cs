@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Windows.Data.Xml.Dom;
@@ -13,7 +13,8 @@ namespace WslNotifydWin.Notifications
         private readonly ILogger<Notification> _logger;
         private readonly ToastNotifier _notifier;
         private readonly IHostApplicationLifetime _lifetime;
-        private readonly ConcurrentDictionary<string, ToastNotification> _toastHistory = new();
+        private readonly object _lockShutdown = new object();
+        private CancellationTokenSource? _cancelShutdown;
         private readonly Timer _timer;
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
@@ -30,6 +31,8 @@ namespace WslNotifydWin.Notifications
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            // FIXME: remove all existing notifications because they may have a duplicated tag
+            ToastNotificationManager.History.Clear(_aumId);
             // TODO: make the period to be configurable
             _timer.Change(new TimeSpan(0, 0, 5), new TimeSpan(0, 0, 30));
             return Task.CompletedTask;
@@ -45,20 +48,45 @@ namespace WslNotifydWin.Notifications
         {
             _timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
             _timer.Dispose();
+            _cancelShutdown?.Dispose();
         }
 
         public Task CloseNotificationAsync(uint Id)
         {
-            _logger.LogInformation("notification {0} has been requested to close", Id);
-            if (_toastHistory.TryGetValue(Id.ToString(), out var notif))
+            if (_notifier.Setting != NotificationSetting.Enabled)
             {
-                _notifier.Hide(notif);
+                _logger.LogError($"notification is disabled: {_notifier.Setting}");
+                _lifetime.StopApplication();
+                throw new Exception($"notification is disabled: {_notifier.Setting}");
+            }
+
+            CancelShutdown();
+            _logger.LogInformation("notification {0} has been requested to close", Id);
+            try
+            {
+                if (TryGetNotificationFromHistory(Id.ToString(), out var notif))
+                {
+                    _notifier.Hide(notif);
+                }
+            }
+            finally
+            {
+                RegisterShutdown();
             }
             return Task.CompletedTask;
         }
 
         public Task<uint> NotifyAsync(string notificationXml, uint notificationId, IDictionary<string, byte[]> notificationData)
         {
+            if (_notifier.Setting != NotificationSetting.Enabled)
+            {
+                _logger.LogError($"notification is disabled: {_notifier.Setting}");
+                _lifetime.StopApplication();
+                throw new Exception($"notification is disabled: {_notifier.Setting}");
+            }
+
+            CancelShutdown();
+
             var doc = new XmlDocument();
             doc.LoadXml(notificationXml);
 
@@ -120,10 +148,9 @@ namespace WslNotifydWin.Notifications
 
                 notif.Activated += HandleActivated;
                 notif.Dismissed += HandleDismissed;
+                notif.Failed += HandleFailed;
 
                 _notifier.Show(notif);
-
-                _toastHistory[notif.Tag] = notif;
             }
             catch (Exception ex)
             {
@@ -133,6 +160,7 @@ namespace WslNotifydWin.Notifications
             }
             finally
             {
+                RegisterShutdown();
                 var stopTcs = new TaskCompletionSource();
                 _lifetime.ApplicationStopping.Register(stopTcs.SetResult);
                 Task.WhenAny(Task.Delay(imageDeletionDelay), stopTcs.Task).ContinueWith(_ =>
@@ -180,8 +208,7 @@ namespace WslNotifydWin.Notifications
             }
             OnAction?.Invoke((id, actionKey));
             OnClose?.Invoke((id, reason));
-            _toastHistory.Remove(sender.Tag, out _);
-            HandleTimer(null);
+            RegisterShutdown();
         }
 
         private void HandleDismissed(ToastNotification sender, ToastDismissedEventArgs args)
@@ -195,20 +222,61 @@ namespace WslNotifydWin.Notifications
             };
             _logger.LogInformation("notification {0} has been dismissed", sender.Tag);
             OnClose?.Invoke((uint.Parse(sender.Tag), reason));
-            _toastHistory.Remove(sender.Tag, out _);
-            HandleTimer(null);
+            RegisterShutdown();
+        }
+
+        private void HandleFailed(ToastNotification sender, ToastFailedEventArgs args)
+        {
+            _logger.LogWarning("failed to send notification {0}", sender.Tag);
+            RegisterShutdown();
         }
 
         private void HandleTimer(object? state)
         {
-            var orphanedNotificationTags = _toastHistory.Keys.AsEnumerable()
-                .Except(ToastNotificationManager.History.GetHistory(_aumId).Select(n => n.Tag));
-            foreach (var tag in orphanedNotificationTags)
+            RegisterShutdown();
+        }
+
+        private void RegisterShutdown()
+        {
+            lock (_lockShutdown)
             {
-                const uint reason = 2;
-                OnClose?.Invoke((uint.Parse(tag), reason));
-                _toastHistory.Remove(tag, out _);
+                _cancelShutdown?.Cancel();
+                if (ToastNotificationManager.History.GetHistory(_aumId).Count > 0)
+                {
+                    return;
+                }
+                _cancelShutdown?.Dispose();
+                _cancelShutdown = new CancellationTokenSource();
+                // TODO: make the timeout to be configurable
+                Task.Delay(10000, _cancelShutdown.Token).ContinueWith(ta =>
+                {
+                    if (ta.IsCanceled)
+                    {
+                        return;
+                    }
+                    if (ta.IsFaulted)
+                    {
+                        throw ta.Exception;
+                    }
+                    _lifetime.StopApplication();
+                });
             }
+        }
+
+        private void CancelShutdown()
+        {
+            lock (_lockShutdown)
+            {
+                _cancelShutdown?.Cancel();
+                _cancelShutdown?.Dispose();
+                _cancelShutdown = null;
+            }
+        }
+
+        private bool TryGetNotificationFromHistory(string tag, [MaybeNullWhen(false)] out ToastNotification notif)
+        {
+            notif = ToastNotificationManager.History.GetHistory(_aumId).FirstOrDefault(n => n.Tag == tag);
+            return notif != null;
         }
     }
 }

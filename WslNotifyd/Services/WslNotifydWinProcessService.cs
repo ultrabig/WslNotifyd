@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -13,12 +12,9 @@ namespace WslNotifyd.Services
         private readonly IServer _server;
         private readonly ProcessStartInfo _psi;
         private readonly byte[]? _stdin;
-        private readonly ConcurrentDictionary<uint, byte> _notificationIds = [];
+        private readonly object _lockProcess = new object();
+        private readonly ManualResetEventSlim _runnable = new ManualResetEventSlim();
         private readonly ManualResetEventSlim _running = new ManualResetEventSlim();
-        private readonly ManualResetEventSlim _stopped = new ManualResetEventSlim(true);
-        private Task? _stopTask;
-        private CancellationTokenSource? _cancelStop;
-        private readonly object _cancelStopLock = new object();
         private Process? _proc;
         public event Action? OnShutdownRequest;
 
@@ -35,6 +31,7 @@ namespace WslNotifyd.Services
         {
             try
             {
+                _runnable.Dispose();
                 _running.Dispose();
 
                 _proc?.Dispose();
@@ -72,73 +69,59 @@ namespace WslNotifyd.Services
                     // wrap in Task for starting up to progress
                     await Task.Run(() =>
                     {
-                        _running.Wait(_lifetime.ApplicationStopping);
-                        _stopped.Reset();
+                        _runnable.Wait(_lifetime.ApplicationStopping);
                     }, _lifetime.ApplicationStopping);
+                    await RunProcess(_lifetime.ApplicationStopping);
                 }
                 catch (OperationCanceledException)
                 {
                     return;
                 }
-                await RunProcess();
             }
         }
 
-        public async Task RequestStart(uint id, CancellationToken cancellationToken = default)
+        public void RequestStart()
         {
             if (_lifetime.ApplicationStopping.IsCancellationRequested)
             {
                 return;
             }
-            _cancelStop?.Cancel();
-            _notificationIds.TryAdd(id, default);
-            if (_running.IsSet)
+            lock (_lockProcess)
             {
-                return;
+                _runnable.Set();
             }
+        }
+
+        public async Task WaitForExitAsync(CancellationToken cancellationToken = default)
+        {
             await Task.Run(() =>
             {
-                _stopped.Wait(cancellationToken);
+                _running.Wait(cancellationToken);
             }, cancellationToken);
-            _running.Set();
-        }
-
-        public void NotificationHandled(uint id)
-        {
-            lock (_cancelStopLock)
+            if (_proc == null)
             {
-                _notificationIds.TryRemove(id, out _);
-                if (!_notificationIds.IsEmpty)
-                {
-                    return;
-                }
-                _cancelStop?.Cancel();
-                _cancelStop = new CancellationTokenSource();
-                // TODO: make the timeout to be configurable
-                _stopTask = Task.Delay(10000, _cancelStop.Token).ContinueWith(async (ta) =>
-                {
-                    if (ta.IsCanceled)
-                    {
-                        return;
-                    }
-                    if (ta.IsFaulted)
-                    {
-                        throw ta.Exception;
-                    }
-                    _logger.LogInformation("shutting down subprocess");
-                    await Shutdown(false);
-                });
+                throw new Exception("error in executing subprocess");
             }
+            await _proc.WaitForExitAsync(cancellationToken);
         }
 
-        private async Task RunProcess()
+        private async Task RunProcess(CancellationToken cancellationToken = default)
         {
             _proc = Process.Start(_psi);
             if (_proc == null)
             {
                 _logger.LogError("error in executing subprocess");
+                lock (_lockProcess)
+                {
+                    _runnable.Reset();
+                    _running.Reset();
+                }
                 _lifetime.StopApplication();
                 return;
+            }
+            lock (_lockProcess)
+            {
+                _running.Set();
             }
             _logger.LogInformation("process started");
 
@@ -164,18 +147,19 @@ namespace WslNotifyd.Services
                 _proc.StandardInput.Dispose();
             }
 
-            await _proc.WaitForExitAsync();
+            await _proc.WaitForExitAsync(cancellationToken);
             _proc.Dispose();
             _proc = null;
         }
 
         private async Task KillWait(CancellationToken cancellationToken = default)
         {
-            _proc?.Kill(true);
-            await Task.Run(() =>
+            if (_proc == null || _proc.HasExited)
             {
-                _stopped.Wait(cancellationToken);
-            }, cancellationToken);
+                return;
+            }
+            _proc.Kill(true);
+            await _proc.WaitForExitAsync(cancellationToken);
         }
 
         private async Task Shutdown(bool forceKillAndReturn, CancellationToken cancellationToken = default)
@@ -186,8 +170,8 @@ namespace WslNotifyd.Services
             }
             if (forceKillAndReturn)
             {
-                _logger.LogWarning("force kill");
-                _proc?.Kill(true);
+                _logger.LogInformation("force kill");
+                _proc.Kill(true);
                 return;
             }
 
@@ -203,16 +187,17 @@ namespace WslNotifyd.Services
                 _logger.LogInformation("gracefully shut down");
                 var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 OnShutdownRequest.Invoke();
+                if (_proc == null || _proc.HasExited)
+                {
+                    return;
+                }
                 // TODO: make the timeout to be configurable
                 cts.CancelAfter(5000);
-                await Task.Run(() =>
-                {
-                    _stopped.Wait(cts.Token);
-                }, cts.Token);
+                await _proc.WaitForExitAsync(cts.Token);
             }
             catch (OperationCanceledException ex)
             {
-                _logger.LogInformation(ex, "fall back to force kill");
+                _logger.LogWarning(ex, "fall back to force kill");
                 await KillWait(cancellationToken);
             }
         }
@@ -235,9 +220,11 @@ namespace WslNotifyd.Services
         private void HandleExited(object? sender, EventArgs e)
         {
             _logger.LogInformation("process exited");
-            _notificationIds.Clear();
-            _running.Reset();
-            _stopped.Set();
+            lock (_lockProcess)
+            {
+                _runnable.Reset();
+                _running.Reset();
+            }
         }
     }
 }

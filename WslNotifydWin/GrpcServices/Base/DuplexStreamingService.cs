@@ -50,11 +50,11 @@ namespace WslNotifydWin.GrpcServices.Base
                         catch (Exception ex)
                         {
                             var errorReq = await HandleErrorAsync(response, ex, _cts.Token);
-                            await streamingCall.RequestStream.WriteAsync(errorReq);
+                            await streamingCall.RequestStream.WriteAsync(errorReq, _cts.Token);
                         }
                         if (req != null)
                         {
-                            await streamingCall.RequestStream.WriteAsync(req);
+                            await streamingCall.RequestStream.WriteAsync(req, _cts.Token);
                         }
                     }
                 }

@@ -1,3 +1,4 @@
+using Grpc.Core;
 using GrpcNotification;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,10 @@ namespace WslNotifydWin.GrpcServices
             {
                 var streaming = _client.Shutdown(new ShutdownRequest(), cancellationToken: stoppingToken);
                 var next = await streaming.ResponseStream.MoveNext(stoppingToken);
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+            {
+                return;
             }
             finally
             {
