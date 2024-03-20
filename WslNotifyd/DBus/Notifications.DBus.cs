@@ -32,14 +32,14 @@ namespace WslNotifyd.DBus
 
         private readonly object _lockOnClose = new object();
         private readonly ManualResetEventSlim _waitOnClose = new ManualResetEventSlim();
-        private event Func<Notifications, CloseNotificationEventArgs, Task>? _OnCloseNotification;
-        public event Func<Notifications, CloseNotificationEventArgs, Task>? OnCloseNotification
+        private readonly List<Func<Notifications, CloseNotificationEventArgs, Task>> OnCloseEventHandlers = [];
+        public event Func<Notifications, CloseNotificationEventArgs, Task> OnCloseNotification
         {
             add
             {
                 lock (_lockOnClose)
                 {
-                    _OnCloseNotification += value;
+                    OnCloseEventHandlers.Add(value);
                     _waitOnClose.Set();
                 }
             }
@@ -47,25 +47,25 @@ namespace WslNotifyd.DBus
             {
                 lock (_lockOnClose)
                 {
-                    if (_OnCloseNotification?.GetInvocationList().Length == 1)
+                    if (OnCloseEventHandlers.Count == 1)
                     {
                         _waitOnClose.Reset();
                     }
-                    _OnCloseNotification -= value;
+                    OnCloseEventHandlers.Remove(value);
                 }
             }
         }
 
         private readonly object _lockOnNotify = new object();
         private readonly ManualResetEventSlim _waitOnNotify = new ManualResetEventSlim();
-        private event Func<Notifications, NotifyEventArgs, Task<uint>>? _OnNotify;
-        public event Func<Notifications, NotifyEventArgs, Task<uint>>? OnNotify
+        private readonly List<Func<Notifications, NotifyEventArgs, Task<uint>>> OnNotifyEventHandlers = [];
+        public event Func<Notifications, NotifyEventArgs, Task<uint>> OnNotify
         {
             add
             {
                 lock (_lockOnNotify)
                 {
-                    _OnNotify += value;
+                    OnNotifyEventHandlers.Add(value);
                     _waitOnNotify.Set();
                 }
             }
@@ -73,11 +73,11 @@ namespace WslNotifyd.DBus
             {
                 lock (_lockOnNotify)
                 {
-                    if (_OnNotify?.GetInvocationList().Length == 1)
+                    if (OnNotifyEventHandlers.Count == 1)
                     {
                         _waitOnNotify.Reset();
                     }
-                    _OnNotify -= value;
+                    OnNotifyEventHandlers.Remove(value);
                 }
             }
         }
@@ -123,14 +123,19 @@ namespace WslNotifyd.DBus
         {
             var waitCloseTask = Task.Run(_waitOnClose.Wait);
             await RequestStartAndWaitAsync([waitCloseTask], _lifetime.ApplicationStopping);
-            var task = _OnCloseNotification?.Invoke(this, new CloseNotificationEventArgs()
+
+            Task[] tasks;
+            lock (_lockOnClose)
             {
-                NotificationId = Id,
-            });
-            if (task != null)
-            {
-                await task;
+                tasks = OnCloseEventHandlers.Select(asyncFn =>
+                {
+                    return asyncFn(this, new CloseNotificationEventArgs()
+                    {
+                        NotificationId = Id,
+                    });
+                }).ToArray();
             }
+            await Task.WhenAll(tasks);
         }
 
         public Task<string[]> GetCapabilitiesAsync()
@@ -178,16 +183,22 @@ namespace WslNotifyd.DBus
             await RequestStartAndWaitAsync([waitNotifyTask, _waitNotificationDuration.Task], _lifetime.ApplicationStopping);
 
             (var doc, var data) = builder.Build(AppName, AppIcon, Summary, Body, Actions, Hints, ExpireTimeout, NotificationDuration);
-            var task = _OnNotify?.Invoke(this, new NotifyEventArgs()
+
+            Task<uint>[] tasks;
+            lock (_lockOnNotify)
             {
-                NotificationXml = doc.OuterXml,
-                NotificationId = notificationId,
-                NotificationData = data,
-            });
-            if (task != null)
-            {
-                await task;
+                tasks = OnNotifyEventHandlers.Select(asyncFn =>
+                {
+                    return asyncFn(this, new NotifyEventArgs()
+                    {
+                        NotificationXml = doc.OuterXml,
+                        NotificationId = notificationId,
+                        NotificationData = data,
+                    });
+                }).ToArray();
             }
+            await Task.WhenAll(tasks);
+
             return notificationId;
         }
 
