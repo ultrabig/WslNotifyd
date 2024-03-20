@@ -231,13 +231,13 @@ namespace WslNotifyd.DBus
             {
                 if (result.IsCanceled)
                 {
-                    throw new Exception("cancelled");
+                    throw new TaskCanceledException(result);
                 }
                 if (result.IsFaulted)
                 {
                     throw result.Exception;
                 }
-                if (result.IsCompleted)
+                if (result.IsCompletedSuccessfully)
                 {
                     throw new Exception("subprocess exited");
                 }
