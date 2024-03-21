@@ -53,6 +53,9 @@ internal class Program
     {
         var listenAddress = "https://127.0.0.1:0";
         (var serverCert, var clientCert) = CreateCerts();
+        // if reloadConfigOnChange == true, WebApplication.CreateBuilder slows down startup
+        // disable it using environment variabels because WebApplication.CreateBuilder does not have a ConfigurationManager param
+        Environment.SetEnvironmentVariable("ASPNETCORE_hostBuilder:reloadConfigOnChange", "false");
         var builder = WebApplication.CreateBuilder(args);
 #if DEBUG
         var notifydWinPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "../../../../WslNotifydWin/scripts/runner.sh");
