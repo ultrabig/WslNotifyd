@@ -10,8 +10,6 @@ namespace WslNotifyd.NotificationBuilders
     class NotificationBuilder
     {
         readonly ILogger<NotificationBuilder> _logger;
-        readonly XmlDocument _doc = new XmlDocument();
-        readonly IDictionary<string, byte[]> _data = new Dictionary<string, byte[]>();
 
         public NotificationBuilder(ILogger<NotificationBuilder> logger)
         {
@@ -32,7 +30,7 @@ namespace WslNotifyd.NotificationBuilders
             targetElement.AppendChild(el);
         }
 
-        private XmlElement CreateAction(XmlElement targetElement, string actionId, string action, bool actionIcons, Dictionary<string, string>? attrs = null)
+        private XmlElement CreateAction(XmlElement targetElement, string actionId, string action, bool actionIcons, Dictionary<string, byte[]> data, Dictionary<string, string>? attrs = null)
         {
             var el = targetElement.OwnerDocument.CreateElement("action");
             el.SetAttribute("arguments", actionId);
@@ -43,7 +41,7 @@ namespace WslNotifyd.NotificationBuilders
                 if (actionIconData != null)
                 {
                     var hashString = GetHashString(actionIconData);
-                    _data[hashString] = actionIconData;
+                    data[hashString] = actionIconData;
                     el.SetAttribute("imageUri", hashString);
                     content = "";
                 }
@@ -167,10 +165,10 @@ namespace WslNotifyd.NotificationBuilders
             return b.ToString();
         }
 
-        private void AddImageData(XmlElement targetElement, byte[] imageData, Dictionary<string, string>? attrs = null)
+        private void AddImageData(XmlElement targetElement, byte[] imageData, Dictionary<string, byte[]> data, Dictionary<string, string>? attrs = null)
         {
             var hashString = GetHashString(imageData);
-            _data[hashString] = imageData;
+            data[hashString] = imageData;
             AddImage(targetElement, hashString, attrs);
         }
 
@@ -343,26 +341,22 @@ namespace WslNotifyd.NotificationBuilders
             return false;
         }
 
-        private void Clear()
-        {
-            var content = """<toast><visual><binding template="ToastGeneric"></binding></visual></toast>""";
-            _doc.LoadXml(content);
-            _data.Clear();
-        }
-
         public (XmlDocument, IDictionary<string, byte[]>) Build(string AppName, string AppIcon, string Summary, string Body, string[] Actions, IDictionary<string, object> Hints, int ExpireTimeout, uint NotificationDuration)
         {
-            Clear();
-            var toast = (XmlElement)_doc.SelectSingleNode("//toast[1]")!;
+            var doc = new XmlDocument();
+            var content = """<toast><visual><binding template="ToastGeneric"></binding></visual></toast>""";
+            doc.LoadXml(content);
+            var data = new Dictionary<string, byte[]>();
+            var toast = (XmlElement)doc.SelectSingleNode("//toast[1]")!;
 
-            var binding = (XmlElement)_doc.SelectSingleNode("//binding[1]")!;
+            var binding = (XmlElement)doc.SelectSingleNode("//binding[1]")!;
             AddText(binding, Summary);
             AddText(binding, FilterXMLTag(Body));
             AddText(binding, AppName, new() { { "placement", "attribution" }, });
 
             if (Actions.Length > 1)
             {
-                var actionsElement = _doc.CreateElement("actions");
+                var actionsElement = doc.CreateElement("actions");
                 var inputs = new List<XmlElement>();
                 var actions = new List<XmlElement>();
 
@@ -370,8 +364,8 @@ namespace WslNotifyd.NotificationBuilders
                 {
                     actionIcons = false;
                 }
-                var inlineReplyAdded = false;
 
+                var inlineReplyAdded = false;
                 for (int i = 0; i + 1 < Actions.Length; i += 2)
                 {
                     var actionId = Actions[i];
@@ -405,7 +399,7 @@ namespace WslNotifyd.NotificationBuilders
                         attrs["placement"] = "contextMenu";
                     }
 
-                    var action = CreateAction(actionsElement, actionId, actionText, actionIcons, attrs);
+                    var action = CreateAction(actionsElement, actionId, actionText, actionIcons, data, attrs);
                     actions.Add(action);
                 }
                 foreach (var el in inputs.Concat(actions))
@@ -421,7 +415,7 @@ namespace WslNotifyd.NotificationBuilders
                 var appIconData = GetDataFromImagePath(AppIcon, 96);
                 if (appIconData != null)
                 {
-                    AddImageData(binding, appIconData, new() { { "placement", "appLogoOverride" }, });
+                    AddImageData(binding, appIconData, data, new() { { "placement", "appLogoOverride" }, });
                     iconAdded = true;
                 }
             }
@@ -430,7 +424,7 @@ namespace WslNotifyd.NotificationBuilders
                 var desktopEntryIconData = GetIconDataFromDesktopEntryName(desktopEntryName, 96);
                 if (desktopEntryIconData != null)
                 {
-                    AddImageData(binding, desktopEntryIconData, new() { { "placement", "appLogoOverride" }, });
+                    AddImageData(binding, desktopEntryIconData, data, new() { { "placement", "appLogoOverride" }, });
                 }
             }
 
@@ -440,7 +434,7 @@ namespace WslNotifyd.NotificationBuilders
                 var pngData = ToPngData(imageData);
                 if (pngData != null)
                 {
-                    AddImageData(binding, pngData);
+                    AddImageData(binding, pngData, data);
                     imageAdded = true;
                 }
             }
@@ -449,7 +443,7 @@ namespace WslNotifyd.NotificationBuilders
                 var localImageData = GetDataFromImagePath(imagePath, 256);
                 if (localImageData != null)
                 {
-                    AddImageData(binding, localImageData);
+                    AddImageData(binding, localImageData, data);
                     imageAdded = true;
                 }
             }
@@ -458,7 +452,7 @@ namespace WslNotifyd.NotificationBuilders
                 var pngData = ToPngData(iconData);
                 if (pngData != null)
                 {
-                    AddImageData(binding, pngData);
+                    AddImageData(binding, pngData, data);
                 }
             }
 
@@ -492,7 +486,7 @@ namespace WslNotifyd.NotificationBuilders
                 toast.SetAttribute("duration", "long");
             }
 
-            return (_doc, _data);
+            return (doc, data);
         }
     }
 }
