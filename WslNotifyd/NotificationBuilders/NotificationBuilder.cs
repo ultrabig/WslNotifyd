@@ -252,7 +252,7 @@ namespace WslNotifyd.NotificationBuilders
                     var uri = new Uri(imagePath);
                     absPath = uri.AbsolutePath;
                 }
-                catch (Exception ex)
+                catch (UriFormatException ex)
                 {
                     _logger.LogWarning(ex, "uri {0} is malformed", imagePath);
                     return null;
