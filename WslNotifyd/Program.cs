@@ -121,7 +121,7 @@ internal class Program
             });
         });
 
-        var app = builder.Build();
+        using var app = builder.Build();
         app.MapGrpcService<NotifierService>();
         app.Run(listenAddress);
     }

@@ -50,7 +50,7 @@ internal class Program
         var aumId = "WslNotifyd";
         SetupRegistry(aumId);
 
-        var initialConfig = new ConfigurationManager();
+        using var initialConfig = new ConfigurationManager();
         initialConfig.AddInMemoryCollection(new Dictionary<string, string?>()
         {
             // if reloadConfigOnChange == true, AddJsonFile freezes on WSL path
@@ -123,7 +123,7 @@ internal class Program
         builder.Services.AddSingleton<IHostedService, ShutdownRequestService>();
         builder.Services.AddSingleton<IHostedService, MonitorMessageDuration>();
 
-        var app = builder.Build();
+        using var app = builder.Build();
         app.Run();
     }
 }
