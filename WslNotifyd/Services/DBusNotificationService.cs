@@ -5,7 +5,7 @@ using WslNotifyd.DBus;
 
 namespace WslNotifyd.Services
 {
-    class DBusNotificationService(Notifications notif, ILogger<DBusNotificationService> logger, IHostApplicationLifetime lifetime) : IHostedService, IAsyncDisposable
+    class DBusNotificationService(Notifications notif, ILogger<DBusNotificationService> logger, IHostApplicationLifetime lifetime) : IHostedService, IDisposable
     {
 
         private Connection? _conn = null;
@@ -27,11 +27,10 @@ namespace WslNotifyd.Services
             {
                 await _conn.UnregisterServiceAsync(serviceName);
                 _conn.UnregisterObject(notif);
-                _conn.Dispose();
             }
         }
 
-        public ValueTask DisposeAsync()
+        public void Dispose()
         {
             if (_conn != null)
             {
@@ -39,7 +38,6 @@ namespace WslNotifyd.Services
                 _conn.Dispose();
                 _conn = null;
             }
-            return ValueTask.CompletedTask;
         }
 
         private void HandleStateChanged(object? sender, ConnectionStateChangedEventArgs eventArgs)

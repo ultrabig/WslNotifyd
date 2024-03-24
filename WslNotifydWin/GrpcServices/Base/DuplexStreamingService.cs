@@ -6,7 +6,7 @@ using WslNotifydWin.Notifications;
 
 namespace WslNotifydWin.GrpcServices.Base
 {
-    abstract class DuplexStreamingService<TRequest, TResponse, TService> : IHostedService, IAsyncDisposable where TRequest : class
+    abstract class DuplexStreamingService<TRequest, TResponse, TService> : IHostedService, IDisposable where TRequest : class
     {
         protected readonly ILogger<TService> logger;
         protected readonly Notifier.NotifierClient client;
@@ -81,7 +81,7 @@ namespace WslNotifydWin.GrpcServices.Base
             }
         }
 
-        public ValueTask DisposeAsync()
+        public void Dispose()
         {
             if (streamingCall != null)
             {
@@ -98,7 +98,6 @@ namespace WslNotifydWin.GrpcServices.Base
                 _readingTask.Dispose();
                 _readingTask = null;
             }
-            return ValueTask.CompletedTask;
         }
     }
 }
