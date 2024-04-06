@@ -11,11 +11,12 @@ namespace WslNotifydWin.Notifications
     {
         private readonly string _aumId;
         private readonly ILogger<Notification> _logger;
-        private readonly ToastNotifier _notifier;
         private readonly IHostApplicationLifetime _lifetime;
         private readonly object _lockShutdown = new object();
-        private CancellationTokenSource? _cancelShutdown;
         private readonly Timer _timer;
+        private CancellationTokenSource? _cancelShutdown;
+        private ToastNotifier Notifier => ToastNotificationManager.CreateToastNotifier(_aumId);
+        private ToastNotificationHistory History => ToastNotificationManager.History;
         public event Action<(uint id, string actionKey)>? OnAction;
         public event Action<(uint id, uint reason)>? OnClose;
         public event Action<(uint id, string text)>? OnReply;
@@ -23,7 +24,6 @@ namespace WslNotifydWin.Notifications
         public Notification(string aumId, ILogger<Notification> logger, IHostApplicationLifetime lifetime)
         {
             _aumId = aumId;
-            _notifier = ToastNotificationManager.CreateToastNotifier(aumId);
             _logger = logger;
             _lifetime = lifetime;
             _timer = new Timer(HandleTimer);
@@ -32,7 +32,7 @@ namespace WslNotifydWin.Notifications
         public Task StartAsync(CancellationToken cancellationToken)
         {
             // FIXME: remove all existing notifications because they may have a duplicated tag
-            ToastNotificationManager.History.Clear(_aumId);
+            History.Clear(_aumId);
             // TODO: make the period to be configurable
             _timer.Change(new TimeSpan(0, 0, 5), new TimeSpan(0, 0, 30));
             return Task.CompletedTask;
@@ -61,7 +61,7 @@ namespace WslNotifydWin.Notifications
             {
                 if (TryGetNotificationFromHistory(Id.ToString(), out var notif))
                 {
-                    _notifier.Hide(notif);
+                    Notifier.Hide(notif);
                 }
             }
             finally
@@ -140,7 +140,7 @@ namespace WslNotifydWin.Notifications
                 notif.Dismissed += HandleDismissed;
                 notif.Failed += HandleFailed;
 
-                _notifier.Show(notif);
+                Notifier.Show(notif);
             }
             catch (Exception ex)
             {
@@ -228,10 +228,11 @@ namespace WslNotifydWin.Notifications
 
         private void ThrowIfNotificationIsDisabled()
         {
-            if (_notifier.Setting != NotificationSetting.Enabled)
+            var setting = Notifier.Setting;
+            if (setting != NotificationSetting.Enabled)
             {
-                _logger.LogError($"notification is disabled: {_notifier.Setting}");
-                throw new Exception($"notification is disabled: {_notifier.Setting}");
+                _logger.LogError($"notification is disabled: {setting}");
+                throw new Exception($"notification is disabled: {setting}");
             }
         }
 
@@ -239,8 +240,10 @@ namespace WslNotifydWin.Notifications
         {
             lock (_lockShutdown)
             {
+                var history = GetHistory();
+                _logger.LogDebug("current history: {0}", string.Join(",", history.Select(n => n.Tag)));
                 _cancelShutdown?.Cancel();
-                if (ToastNotificationManager.History.GetHistory(_aumId).Count > 0)
+                if (history.Count > 0)
                 {
                     return;
                 }
@@ -274,8 +277,10 @@ namespace WslNotifydWin.Notifications
 
         private bool TryGetNotificationFromHistory(string tag, [MaybeNullWhen(false)] out ToastNotification notif)
         {
-            notif = ToastNotificationManager.History.GetHistory(_aumId).FirstOrDefault(n => n.Tag == tag);
+            notif = GetHistory().FirstOrDefault(n => n.Tag == tag);
             return notif != null;
         }
+
+        private IReadOnlyList<ToastNotification> GetHistory() => History.GetHistory(_aumId);
     }
 }
