@@ -80,7 +80,7 @@ internal class Program
                     },
                     CheckCertificateRevocationList = false,
                     ClientCertificateOptions = ClientCertificateOption.Manual,
-                    ServerCertificateCustomValidationCallback = (req, cert, chain, errors) =>
+                    ServerCertificateCustomValidationCallback = (req, cert, _chain, errors) =>
                     {
                         if (errors == SslPolicyErrors.None)
                         {
@@ -95,8 +95,11 @@ internal class Program
                             logger.LogWarning("invalid Thumbprint: {0}", cert.Thumbprint);
                             return false;
                         }
-                        chain ??= new X509Chain();
+                        using var chain = new X509Chain();
                         chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                        chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
+                        chain.ChainPolicy.DisableCertificateDownloads = true;
                         chain.ChainPolicy.CustomTrustStore.Add(cert);
                         var result = chain.Build(clientCert);
                         logger.LogDebug("client check: {0}", result);

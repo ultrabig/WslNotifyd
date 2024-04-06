@@ -104,14 +104,18 @@ internal class Program
             {
                 var logger = kestrelOptions.ApplicationServices.GetRequiredService<ILogger<Program>>(); // TODO: better category
                 httpsOptions.ClientCertificateMode = ClientCertificateMode.RequireCertificate;
-                httpsOptions.ClientCertificateValidation = (cert, chain, errors) =>
+                httpsOptions.CheckCertificateRevocation = false;
+                httpsOptions.ClientCertificateValidation = (cert, _chain, errors) =>
                 {
                     if (errors == SslPolicyErrors.None)
                     {
                         return true;
                     }
-                    chain ??= new X509Chain();
+                    using var chain = new X509Chain();
                     chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                    chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                    chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
+                    chain.ChainPolicy.DisableCertificateDownloads = true;
                     chain.ChainPolicy.CustomTrustStore.Add(serverCert);
                     var result = chain.Build(cert);
                     logger.LogDebug("server check: {0}", result);
