@@ -33,23 +33,30 @@ namespace WslNotifyd.GrpcServices
                     SerialId = serial,
                 };
                 var tcs = new TaskCompletionSource();
+                context.CancellationToken.Register(() => tcs.TrySetCanceled());
                 void handler(CloseNotificationRequest req)
                 {
                     if (req.SerialId == serial)
                     {
-                        watcher.OnEventOccured -= handler;
                         if (req.Success)
                         {
-                            tcs.SetResult();
+                            tcs.TrySetResult();
                         }
                         else
                         {
-                            tcs.SetException(new Exception(req.Error.ErrorMessage));
+                            tcs.TrySetException(new Exception(req.Error.ErrorMessage));
                         }
                     }
                 }
                 watcher.OnEventOccured += handler;
-                await Task.WhenAll(tcs.Task, responseStream.WriteAsync(reply, context.CancellationToken));
+                try
+                {
+                    await Task.WhenAll(tcs.Task, responseStream.WriteAsync(reply, context.CancellationToken));
+                }
+                finally
+                {
+                    watcher.OnEventOccured -= handler;
+                }
             }
             _notifications.OnCloseNotification += HandleCloseNotification;
             try
@@ -89,23 +96,30 @@ namespace WslNotifyd.GrpcServices
                     reply.NotificationData.Add(k, ByteString.CopyFrom(v));
                 }
                 var tcs = new TaskCompletionSource<uint>();
+                context.CancellationToken.Register(() => tcs.TrySetCanceled());
                 void handler(NotifyRequest req)
                 {
                     if (req.SerialId == serial)
                     {
-                        watcher.OnEventOccured -= handler;
                         if (req.Success)
                         {
-                            tcs.SetResult(req.NotificationId);
+                            tcs.TrySetResult(req.NotificationId);
                         }
                         else
                         {
-                            tcs.SetException(new Exception(req.Error.ErrorMessage));
+                            tcs.TrySetException(new Exception(req.Error.ErrorMessage));
                         }
                     }
                 }
                 watcher.OnEventOccured += handler;
-                await Task.WhenAll(tcs.Task, responseStream.WriteAsync(reply, context.CancellationToken));
+                try
+                {
+                    await Task.WhenAll(tcs.Task, responseStream.WriteAsync(reply, context.CancellationToken));
+                }
+                finally
+                {
+                    watcher.OnEventOccured -= handler;
+                }
                 return tcs.Task.Result;
             }
             _notifications.OnNotify += handleNotify;
