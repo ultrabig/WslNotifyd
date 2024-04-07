@@ -46,11 +46,13 @@ namespace WslNotifyd.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var startTcs = new TaskCompletionSource();
-            _lifetime.ApplicationStarted.Register(startTcs.SetResult);
+            var startReg = _lifetime.ApplicationStarted.Register(startTcs.SetResult);
             var stopTcs = new TaskCompletionSource();
-            stoppingToken.Register(stopTcs.SetResult);
+            var stopReg = stoppingToken.Register(stopTcs.SetResult);
 
             var completedTask = await Task.WhenAny(startTcs.Task, stopTcs.Task);
+            startReg.Dispose();
+            stopReg.Dispose();
             if (completedTask == stopTcs.Task)
             {
                 return;
@@ -60,7 +62,7 @@ namespace WslNotifyd.Services
             var address = addressFeature.Addresses.ElementAt(0);
             _psi.ArgumentList.Add(address);
 
-            _lifetime.ApplicationStopping.Register(HandleStopping);
+            using var reg = _lifetime.ApplicationStopping.Register(HandleStopping);
 
             while (!_lifetime.ApplicationStopping.IsCancellationRequested)
             {
@@ -185,7 +187,7 @@ namespace WslNotifyd.Services
             try
             {
                 _logger.LogInformation("gracefully shut down");
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 OnShutdownRequest.Invoke();
                 if (_proc == null || _proc.HasExited)
                 {

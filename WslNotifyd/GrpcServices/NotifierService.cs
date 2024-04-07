@@ -33,7 +33,7 @@ namespace WslNotifyd.GrpcServices
                     SerialId = serial,
                 };
                 var tcs = new TaskCompletionSource();
-                context.CancellationToken.Register(() => tcs.TrySetCanceled());
+                using var reg = context.CancellationToken.Register(() => tcs.TrySetCanceled());
                 void handler(CloseNotificationRequest req)
                 {
                     if (req.SerialId == serial)
@@ -96,7 +96,7 @@ namespace WslNotifyd.GrpcServices
                     reply.NotificationData.Add(k, ByteString.CopyFrom(v));
                 }
                 var tcs = new TaskCompletionSource<uint>();
-                context.CancellationToken.Register(() => tcs.TrySetCanceled());
+                using var reg = context.CancellationToken.Register(() => tcs.TrySetCanceled());
                 void handler(NotifyRequest req)
                 {
                     if (req.SerialId == serial)

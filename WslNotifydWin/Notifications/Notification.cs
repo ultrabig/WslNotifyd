@@ -152,9 +152,10 @@ namespace WslNotifydWin.Notifications
             {
                 RegisterShutdown();
                 var stopTcs = new TaskCompletionSource();
-                _lifetime.ApplicationStopping.Register(stopTcs.SetResult);
+                var reg = _lifetime.ApplicationStopping.Register(stopTcs.SetResult);
                 Task.WhenAny(Task.Delay(imageDeletionDelay), stopTcs.Task).ContinueWith(_ =>
                 {
+                    reg.Dispose();
                     try
                     {
                         foreach (var uri in savedNotificationData.Values)
