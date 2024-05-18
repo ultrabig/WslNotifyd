@@ -45,15 +45,7 @@ namespace WslNotifyd.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var startTcs = new TaskCompletionSource();
-            var startReg = _lifetime.ApplicationStarted.Register(startTcs.SetResult);
-            var stopTcs = new TaskCompletionSource();
-            var stopReg = stoppingToken.Register(stopTcs.SetResult);
-
-            var completedTask = await Task.WhenAny(startTcs.Task, stopTcs.Task);
-            startReg.Dispose();
-            stopReg.Dispose();
-            if (completedTask == stopTcs.Task)
+            if (!await WaitApplicationStarted(stoppingToken))
             {
                 return;
             }
@@ -105,6 +97,17 @@ namespace WslNotifyd.Services
                 throw new Exception("error in executing subprocess");
             }
             await _proc.WaitForExitAsync(cancellationToken);
+        }
+
+        private async Task<bool> WaitApplicationStarted(CancellationToken stoppingToken)
+        {
+            var startTcs = new TaskCompletionSource();
+            using var startReg = _lifetime.ApplicationStarted.Register(startTcs.SetResult);
+            var stopTcs = new TaskCompletionSource();
+            using var stopReg = stoppingToken.Register(stopTcs.SetResult);
+
+            var completedTask = await Task.WhenAny(startTcs.Task, stopTcs.Task);
+            return completedTask == startTcs.Task;
         }
 
         private async Task RunProcess(CancellationToken cancellationToken = default)
