@@ -21,5 +21,8 @@
   <ItemGroup>
     <Protobuf Include="..\Protos\notification.proto" GrpcServices="Client" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="scripts\*.sh" CopyToOutputDirectory="Always" />
+  </ItemGroup>
 
 </Project>

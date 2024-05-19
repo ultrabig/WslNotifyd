@@ -39,6 +39,10 @@ internal class Program
         stdin.CopyTo(ms);
         stdin.Close();
         var data = ms.ToArray();
+        if (data.Length == 0)
+        {
+            throw new Exception("empty stdin");
+        }
         var msg = CertificateMessage.Parser.ParseFrom(data);
         var serverCert = new X509Certificate2(msg.ServerCertificate.ToByteArray());
         var clientCert = new X509Certificate2(msg.ClientCertificate.ToByteArray());
