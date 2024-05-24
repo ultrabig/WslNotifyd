@@ -55,6 +55,7 @@ internal class Program
         (var serverCert, var clientCert) = CreateCerts();
         // if reloadConfigOnChange == true, WebApplication.CreateBuilder slows down startup
         // disable it using environment variabels because WebApplication.CreateBuilder does not have a ConfigurationManager param
+        // see internal WebApplicationBuilder.WebApplicationBuilder(WebApplicationOptions options, Action<IHostBuilder>? configureDefaults = null)
         Environment.SetEnvironmentVariable("ASPNETCORE_hostBuilder:reloadConfigOnChange", "false");
         var builder = WebApplication.CreateBuilder(args);
 #if DEBUG

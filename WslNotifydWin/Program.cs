@@ -58,8 +58,6 @@ internal class Program
         initialConfig.AddInMemoryCollection(new Dictionary<string, string?>()
         {
             // if reloadConfigOnChange == true, AddJsonFile freezes on WSL path
-            // https://github.com/dotnet/runtime/blob/1381d5ebd2ab1f292848d5b19b80cf71ac332508/src/libraries/Microsoft.Extensions.Hosting/src/HostingHostBuilderExtensions.cs#L262
-            // https://github.com/dotnet/runtime/blob/1381d5ebd2ab1f292848d5b19b80cf71ac332508/src/libraries/Microsoft.Extensions.Hosting/src/HostingHostBuilderExtensions.cs#L241
             ["hostBuilder:reloadConfigOnChange"] = "false",
         });
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings()
