@@ -10,7 +10,7 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     - [Windows interop](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#interop-settings) enabled
 - can connect D-Bus user session (check `$DBUS_SESSION_BUS_ADDRESS`)
 - `iconv` is installed
-- `gtk3` is installed
+- `gtk3` is installed if you want to display images
 
 ## Usage
 
