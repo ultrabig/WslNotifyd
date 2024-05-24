@@ -9,7 +9,8 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     - [localhostForwarding](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#main-wsl-settings) enabled
     - [Windows interop](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#interop-settings) enabled
 - can connect D-Bus user session (check `$DBUS_SESSION_BUS_ADDRESS`)
-- `iconv` command is installed
+- `iconv` is installed
+- `gtk3` is installed
 
 ## Usage
 
