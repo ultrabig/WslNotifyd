@@ -70,6 +70,11 @@ internal class Program
             var logger = serviceProvider.GetRequiredService<ILogger<WslNotifydWinProcessService>>();
             var lifetime = serviceProvider.GetRequiredService<IHostApplicationLifetime>();
             var server = serviceProvider.GetRequiredService<IServer>();
+#if DEBUG
+            var hashString = "development";
+#else
+            var hashString = new string(new Random().GetItems("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".ToCharArray(), 10));
+#endif
             var psi = new ProcessStartInfo(notifydWinPath)
             {
                 UseShellExecute = false,
@@ -78,6 +83,9 @@ internal class Program
                 RedirectStandardOutput = false,
                 RedirectStandardError = false,
                 CreateNoWindow = true,
+                ArgumentList = {
+                    hashString,
+                }
             };
 
             var msg = new CertificateMessage()
