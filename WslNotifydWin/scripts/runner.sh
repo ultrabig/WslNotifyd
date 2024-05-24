@@ -16,8 +16,9 @@ hash="$1"
 shift
 
 do_copy=1
-if [[ $hash != development && -f $dst/__hash__ ]]; then
-    hash_on_disk="$(<"${dst}/__hash__")"
+hash_path="${dst}/__hash__"
+if [[ $hash != development && -f $hash_path ]]; then
+    hash_on_disk="$(<"${hash_path}")"
     if [[ $hash_on_disk = $hash ]]; then
         do_copy=0
     fi
@@ -26,6 +27,7 @@ if [[ $do_copy = 1 ]]; then
     echo "copy WslNotifyd to ${dst}"
     rm -rf "${dst}"
     cp -r "${copy_src}" "${dst}"
+    printf '%s\n' "${hash}" > "${hash_path}"
 fi
 
 exec "${dst}/WslNotifydWin.exe" "$@"
