@@ -247,8 +247,15 @@ namespace WslNotifyd.NotificationBuilders
                 string absPath;
                 try
                 {
-                    var uri = new Uri(imagePath);
-                    absPath = uri.AbsolutePath;
+                    if (imagePath.StartsWith("file://"))
+                    {
+                        var uri = new Uri(imagePath);
+                        absPath = uri.AbsolutePath;
+                    }
+                    else
+                    {
+                        absPath = imagePath;
+                    }
                 }
                 catch (UriFormatException ex)
                 {
@@ -440,7 +447,7 @@ namespace WslNotifyd.NotificationBuilders
             }
             if (!imageAdded && TryGetHintValue<string>(Hints, ["image-path", "image_path"], out var imagePath) && !string.IsNullOrEmpty(imagePath))
             {
-                var localImageData = GetDataFromImagePath(imagePath, 256);
+                var localImageData = GetDataFromImagePath(imagePath, 1024);
                 if (localImageData != null)
                 {
                     AddImageData(binding, localImageData, data);
