@@ -409,11 +409,15 @@ namespace WslNotifyd.NotificationBuilders
                     var action = CreateAction(actionsElement, actionId, actionText, actionIcons, data, attrs);
                     actions.Add(action);
                 }
-                foreach (var el in inputs.Concat(actions))
+                var childElements = inputs.Concat(actions).ToArray();
+                if (childElements.Length > 0)
                 {
-                    actionsElement.AppendChild(el);
+                    foreach (var el in childElements)
+                    {
+                        actionsElement.AppendChild(el);
+                    }
+                    toast.AppendChild(actionsElement);
                 }
-                toast.AppendChild(actionsElement);
             }
 
             var iconAdded = false;
