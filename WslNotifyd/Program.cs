@@ -61,20 +61,17 @@ internal class Program
 #if DEBUG
         var notifydWinPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "../../../../WslNotifydWin/scripts/runner-development.sh");
         var workingDirectory = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "../../../../WslNotifydWin");
+        var hashString = "development";
 #else
         var notifydWinPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "WslNotifydWin/scripts/runner-release.sh");
         var workingDirectory = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "WslNotifydWin");
+        var hashString = new string(new Random().GetItems("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".ToCharArray(), 10));
 #endif
         builder.Services.AddSingleton(serviceProvider =>
         {
             var logger = serviceProvider.GetRequiredService<ILogger<WslNotifydWinProcessService>>();
             var lifetime = serviceProvider.GetRequiredService<IHostApplicationLifetime>();
             var server = serviceProvider.GetRequiredService<IServer>();
-#if DEBUG
-            var hashString = "development";
-#else
-            var hashString = new string(new Random().GetItems("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".ToCharArray(), 10));
-#endif
             var psi = new ProcessStartInfo(notifydWinPath)
             {
                 UseShellExecute = false,
@@ -85,7 +82,7 @@ internal class Program
                 CreateNoWindow = true,
                 ArgumentList = {
                     hashString,
-                }
+                },
             };
 
             var msg = new CertificateMessage()
