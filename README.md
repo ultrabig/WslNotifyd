@@ -30,11 +30,13 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```
 5. Send notifications from any app!
     ```sh
-    notify-send 'It works!'
+    notify-send 'Hello world!'
     ```
+    ![hello-world](https://github.com/ultrabig/WslNotifyd/assets/161245554/54f6f851-27fa-49e2-a8e9-d8d61167a180)
+
 
 ## Supported features
-
+There are usage examples with images on the [Wiki](https://github.com/ultrabig/WslNotifyd/wiki/Supported-features) with images.
 - Wait dismiss/action
     ```sh
     notify-send -w foo
@@ -74,6 +76,19 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     $ notify-send -p foo
     1
     $ notify-send -r 1 bar
+    ```
+- Add an inline reply textbox (non-standard KDE feature)
+    ```sh
+    notify-send -A inline-reply='Reply' foo
+    ```
+    Use the following script to monitor replies.
+    ```sh
+    busctl --user \
+        --match="type='signal',
+            interface='org.freedesktop.Notifications',
+            path='/org/freedesktop/Notifications',
+            member='NotificationReplied'" \
+        monitor
     ```
 
 ## Integration with systemd/D-Bus
