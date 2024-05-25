@@ -30,7 +30,7 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```
 5. Send notifications from any app!
     ```sh
-    notify-send 'Hello world!'
+    notify-send 'Hello World!'
     ```
     ![hello-world](https://github.com/ultrabig/WslNotifyd/assets/161245554/54f6f851-27fa-49e2-a8e9-d8d61167a180)
 
