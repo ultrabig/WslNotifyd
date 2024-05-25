@@ -447,7 +447,7 @@ namespace WslNotifyd.NotificationBuilders
             }
             if (!imageAdded && TryGetHintValue<string>(Hints, ["image-path", "image_path"], out var imagePath) && !string.IsNullOrEmpty(imagePath))
             {
-                var localImageData = GetDataFromImagePath(imagePath, 1024);
+                var localImageData = GetDataFromImagePath(imagePath, 256);
                 if (localImageData != null)
                 {
                     AddImageData(binding, localImageData, data);
