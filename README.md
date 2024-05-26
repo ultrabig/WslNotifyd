@@ -30,9 +30,9 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```
 5. Send notifications from any app!
     ```sh
-    notify-send 'Hello World!'
+    notify-send 'Hello' 'World!'
     ```
-    ![hello-world](https://github.com/ultrabig/WslNotifyd/assets/161245554/54f6f851-27fa-49e2-a8e9-d8d61167a180)
+    ![hello-world](https://github.com/ultrabig/WslNotifyd/assets/161245554/6363a0f1-368b-4f8f-bf9d-2bba14324ec5)
 
 
 ## Supported features
@@ -79,7 +79,7 @@ There are usage examples with images on the [Wiki](https://github.com/ultrabig/W
     ```
 - Add an inline reply textbox (non-standard KDE feature)
     ```sh
-    notify-send -A inline-reply='Reply' foo
+    notify-send -h 'string:x-kde-reply-placeholder-text:AAA' -A inline-reply='Reply' foo
     ```
     Use the following script to monitor replies.
     ```sh
