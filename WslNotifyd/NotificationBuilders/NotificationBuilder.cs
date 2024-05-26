@@ -198,9 +198,14 @@ namespace WslNotifyd.NotificationBuilders
                 }
                 return pixbuf.SaveToBuffer("png");
             }
-            catch (GLib.GException ex)
+            catch (TypeInitializationException tEx)
             {
-                _logger.LogWarning(ex, "error while looking up an icon: {0}", string.Join(", ", iconNames));
+                _logger.LogWarning(tEx, "error while initializing a type. Maybe you need to install gtk3");
+                return null;
+            }
+            catch (GLib.GException gEx)
+            {
+                _logger.LogWarning(gEx, "error while looking up an icon: {0}", string.Join(", ", iconNames));
                 return null;
             }
         }
@@ -232,12 +237,18 @@ namespace WslNotifyd.NotificationBuilders
                         }
                     }
                 }
+                return null;
             }
-            catch (GLib.GException ex)
+            catch (TypeInitializationException tEx)
             {
-                _logger.LogWarning(ex, "error while loading desktop entry {0}", desktopEntryName);
+                _logger.LogWarning(tEx, "error while initializing a type. Maybe you need to install gtk3");
+                return null;
             }
-            return null;
+            catch (GLib.GException gEx)
+            {
+                _logger.LogWarning(gEx, "error while loading desktop entry {0}", desktopEntryName);
+                return null;
+            }
         }
 
         private byte[]? GetDataFromImagePath(string imagePath, int size)
@@ -267,9 +278,14 @@ namespace WslNotifyd.NotificationBuilders
                     using var pixbuf = new Gdk.Pixbuf(absPath);
                     return pixbuf.SaveToBuffer("png");
                 }
-                catch (GLib.GException ex)
+                catch (TypeInitializationException tEx)
                 {
-                    _logger.LogWarning(ex, "error while reading image {0}", imagePath);
+                    _logger.LogWarning(tEx, "error while initializing a type. Maybe you need to install gtk3");
+                    return null;
+                }
+                catch (GLib.GException gEx)
+                {
+                    _logger.LogWarning(gEx, "error while reading image {0}", imagePath);
                     return null;
                 }
             }
@@ -317,9 +333,14 @@ namespace WslNotifyd.NotificationBuilders
                 using var pixbuf = new Gdk.Pixbuf(data.data, Gdk.Colorspace.Rgb, data.hasAlpha, data.bitsPerSample, data.width, data.height, data.rowstride);
                 return pixbuf.SaveToBuffer("png");
             }
-            catch (GLib.GException ex)
+            catch (TypeInitializationException tEx)
             {
-                _logger.LogWarning(ex, "error while loading image data as a gdk-pixbuf");
+                _logger.LogWarning(tEx, "error while initializing a type. Maybe you need to install gtk3");
+                return null;
+            }
+            catch (GLib.GException gEx)
+            {
+                _logger.LogWarning(gEx, "error while loading image data as a gdk-pixbuf");
                 return null;
             }
         }
