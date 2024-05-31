@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Windows.Data.Xml.Dom;
@@ -14,6 +14,7 @@ namespace WslNotifydWin.Notifications
         private readonly IHostApplicationLifetime _lifetime;
         private readonly object _lockShutdown = new object();
         private readonly Timer _timer;
+        private readonly ConcurrentDictionary<string, ToastNotification> _notifications = [];
         private CancellationTokenSource? _cancelShutdown;
         private ToastNotifier Notifier => ToastNotificationManager.CreateToastNotifier(_aumId);
         private ToastNotificationHistory History => ToastNotificationManager.History;
@@ -59,7 +60,7 @@ namespace WslNotifydWin.Notifications
             _logger.LogInformation("notification {0} has been requested to close", Id);
             try
             {
-                if (TryGetNotificationFromHistory(Id.ToString(), out var notif))
+                if (_notifications.TryRemove(Id.ToString(), out var notif))
                 {
                     Notifier.Hide(notif);
                 }
@@ -140,6 +141,7 @@ namespace WslNotifydWin.Notifications
                 notif.Dismissed += HandleDismissed;
                 notif.Failed += HandleFailed;
 
+                _notifications[notif.Tag] = notif;
                 Notifier.Show(notif);
             }
             catch (Exception ex)
@@ -175,6 +177,7 @@ namespace WslNotifydWin.Notifications
         private void HandleActivated(ToastNotification sender, object args)
         {
             _logger.LogInformation("notification {0} has been activated", sender.Tag);
+            _notifications.TryRemove(sender.Tag, out _);
             var actionKey = "default";
             const uint reason = 2;
             var id = uint.Parse(sender.Tag);
@@ -204,6 +207,7 @@ namespace WslNotifydWin.Notifications
 
         private void HandleDismissed(ToastNotification sender, ToastDismissedEventArgs args)
         {
+            // Don't remove from _notification because it may stay in the Action Center
             uint reason = args.Reason switch
             {
                 ToastDismissalReason.TimedOut => 1,
@@ -211,14 +215,15 @@ namespace WslNotifydWin.Notifications
                 ToastDismissalReason.ApplicationHidden => 3,
                 _ => 4,
             };
-            _logger.LogInformation("notification {0} has been dismissed", sender.Tag);
+            _logger.LogInformation("notification {0} has been dismissed, reason: {1}", sender.Tag, args.Reason);
             OnClose?.Invoke((uint.Parse(sender.Tag), reason));
             RegisterShutdown();
         }
 
         private void HandleFailed(ToastNotification sender, ToastFailedEventArgs args)
         {
-            _logger.LogWarning("failed to send notification {0}", sender.Tag);
+            _logger.LogWarning(args.ErrorCode, "failed to send notification {0}", sender.Tag);
+            _notifications.TryRemove(sender.Tag, out _);
             RegisterShutdown();
         }
 
@@ -242,7 +247,13 @@ namespace WslNotifydWin.Notifications
             lock (_lockShutdown)
             {
                 var history = GetHistory();
-                _logger.LogDebug("current history: {0}", string.Join(",", history.Select(n => n.Tag)));
+                var tags = history.Select(n => n.Tag).ToArray();
+                _logger.LogDebug("current history: {0}", string.Join(",", tags));
+                // remove notifications that have been already dismissed
+                foreach (var dismissed in _notifications.Keys.Except(tags))
+                {
+                    _notifications.TryRemove(dismissed, out _);
+                }
                 _cancelShutdown?.Cancel();
                 if (history.Count > 0)
                 {
@@ -274,12 +285,6 @@ namespace WslNotifydWin.Notifications
                 _cancelShutdown?.Dispose();
                 _cancelShutdown = null;
             }
-        }
-
-        private bool TryGetNotificationFromHistory(string tag, [MaybeNullWhen(false)] out ToastNotification notif)
-        {
-            notif = GetHistory().FirstOrDefault(n => n.Tag == tag);
-            return notif != null;
         }
 
         private IReadOnlyList<ToastNotification> GetHistory() => History.GetHistory(_aumId);
