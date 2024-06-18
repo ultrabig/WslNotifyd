@@ -51,6 +51,7 @@ internal class Program
 
     private static void Main(string[] args)
     {
+        Directory.SetCurrentDirectory(Path.GetDirectoryName(Environment.ProcessPath)!);
         var aumId = "WslNotifyd";
         SetupRegistry(aumId);
 

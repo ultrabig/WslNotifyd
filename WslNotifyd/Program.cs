@@ -51,6 +51,7 @@ internal class Program
 
     private static void Main(string[] args)
     {
+        Directory.SetCurrentDirectory(Path.GetDirectoryName(Environment.ProcessPath)!);
         var listenAddress = "https://127.0.0.1:0";
         (var serverCert, var clientCert) = CreateCerts();
         // if reloadConfigOnChange == true, WebApplication.CreateBuilder slows down startup
