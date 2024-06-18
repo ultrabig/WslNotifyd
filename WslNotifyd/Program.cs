@@ -83,6 +83,9 @@ internal class Program
                 CreateNoWindow = true,
                 ArgumentList = {
                     hashString,
+                    // WSL does not pass environment variables to the Windows process
+                    // so use command line argument here
+                    $"--environment={builder.Environment.EnvironmentName}",
                 },
             };
 

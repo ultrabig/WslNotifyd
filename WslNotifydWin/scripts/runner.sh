@@ -24,6 +24,7 @@ if [[ $hash_str != development && -f $hash_path ]]; then
     fi
 fi
 if [[ $do_copy = 1 ]]; then
+    # TODO: follow the loglevel of WslNotifyd
     echo "copy WslNotifyd to ${dst}"
     rm -rf "${dst}"
     cp -r "${copy_src}" "${dst}"

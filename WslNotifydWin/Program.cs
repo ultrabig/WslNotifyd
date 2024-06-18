@@ -67,10 +67,11 @@ internal class Program
             Configuration = initialConfig,
         });
         (var serverCert, var clientCert) = ReadCertificate();
+        var uriString = Array.Find(args, a => a.StartsWith("https://")) ?? throw new ArgumentException("https:// url not found");
         builder.Services
             .AddGrpcClient<Notifier.NotifierClient>(options =>
             {
-                options.Address = new Uri(args[0]);
+                options.Address = new Uri(uriString);
             })
             .ConfigurePrimaryHttpMessageHandler(serviceProvider =>
             {
