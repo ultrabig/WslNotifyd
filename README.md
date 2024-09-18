@@ -22,6 +22,7 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     ```
 3. Build the app
     ```sh
+    cd WslNotifyd
     dotnet publish WslNotifyd -o out && dotnet publish WslNotifydWin --runtime win-x64 -o out/WslNotifydWin --self-contained
     ```
 4. Run the app
