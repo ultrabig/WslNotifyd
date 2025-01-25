@@ -1,6 +1,6 @@
 # WslNotifyd
 
-WslNotifyd is an implementation of the [Desktop Notifications Specification](https://specifications.freedesktop.org/notification-spec/notification-spec-latest.html) using Windows native functionality.
+WslNotifyd is an implementation of the [Desktop Notifications Specification](https://specifications.freedesktop.org/notification-spec/latest/) using Windows native functionality.
 
 ## Requirements
 - WSL2 (WSL1 is not confirmed to work)
@@ -126,7 +126,9 @@ There are usage examples with images on the [Wiki](https://github.com/ultrabig/W
         - `~/.local/share/dbus-1/services/org.freedesktop.Notifications.service`
         - `~/.local/share/systemd/user/WslNotifyd.service`
         - `~/.local/lib/WslNotifyd`
-2. Delete the registry key `HKCU\Software\Classes\AppUserModelId\WslNotifyd`
+2. Remove WslNotifydWin in Windows TEMP directory
+    - `%TEMP%\WslNotifydWin`
+3. Delete the registry key `HKCU\Software\Classes\AppUserModelId\WslNotifyd`
     ```sh
     reg.exe delete 'HKCU\Software\Classes\AppUserModelId\WslNotifyd'
     ```
