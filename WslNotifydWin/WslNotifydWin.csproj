@@ -24,7 +24,7 @@
   <ItemGroup>
     <Content Include="scripts\*.sh" CopyToOutputDirectory="Always" />
     <!-- Sdk="Microsoft.NET.Sdk" does not copy appsettings*.json by default -->
-    <Content Include="appsettings.Production.json" CopyToOutputDirectory="Always" />
+    <Content Include="appsettings.json" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
 </Project>

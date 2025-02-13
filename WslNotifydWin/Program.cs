@@ -52,8 +52,12 @@ internal class Program
     private static void Main(string[] args)
     {
         Directory.SetCurrentDirectory(Path.GetDirectoryName(Environment.ProcessPath)!);
-        var aumId = "WslNotifyd";
-        SetupRegistry(aumId);
+        var aumId = Array.Find(args, a => a.StartsWith("--aumId="))?[8..];
+        if (string.IsNullOrWhiteSpace(aumId))
+        {
+            aumId = "WslNotifyd";
+            SetupRegistry(aumId);
+        }
 
         using var initialConfig = new ConfigurationManager();
         initialConfig.AddInMemoryCollection(new Dictionary<string, string?>()

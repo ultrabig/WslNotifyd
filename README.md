@@ -134,6 +134,20 @@ There are usage examples with images on the [Wiki](https://github.com/ultrabig/W
     ```
     Remove quotes when you want to use cmd.exe
 
+## Known Issues
+At least in recent versions of Windows 11, the default settings do not work.
+You need to place the following configuration file in the `out` directory with the name `appsettings.Production.json`.
+With this setting, notifications will appear as if they were sent by Explorer.
+Note that the configuration file will be deleted when running dotnet publish. This issue is planned to be fixed in the future.
+
+```json
+{
+    "WslNotifydWin": {
+        "ApplicationUserModelId": "Microsoft.Windows.Explorer"
+    }
+}
+```
+
 ## Limitations
 
 - Markup is not supported

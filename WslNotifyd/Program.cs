@@ -73,6 +73,7 @@ internal class Program
             var logger = serviceProvider.GetRequiredService<ILogger<WslNotifydWinProcessService>>();
             var lifetime = serviceProvider.GetRequiredService<IHostApplicationLifetime>();
             var server = serviceProvider.GetRequiredService<IServer>();
+            var config = serviceProvider.GetRequiredService<IConfiguration>();
             var psi = new ProcessStartInfo(notifydWinPath)
             {
                 UseShellExecute = false,
@@ -88,6 +89,11 @@ internal class Program
                     $"--environment={builder.Environment.EnvironmentName}",
                 },
             };
+            var aumId = config.GetValue<string>("WslNotifydWin:ApplicationUserModelId");
+            if (aumId != null)
+            {
+                psi.ArgumentList.Add($"--aumId={aumId}");
+            }
 
             var msg = new CertificateMessage()
             {
