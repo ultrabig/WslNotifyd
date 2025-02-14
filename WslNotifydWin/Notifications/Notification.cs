@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Windows.Data.Xml.Dom;
@@ -234,7 +235,25 @@ namespace WslNotifydWin.Notifications
 
         private void ThrowIfNotificationIsDisabled()
         {
-            var setting = Notifier.Setting;
+            NotificationSetting setting;
+            try
+            {
+                setting = Notifier.Setting;
+            }
+            catch (Exception ex)
+            {
+                const int E_ELEMENT_NOT_FOUND = unchecked((int)0x80070490);
+                if (ex is COMException comEx && comEx.HResult == E_ELEMENT_NOT_FOUND)
+                {
+                    // Accessing the setting before sending the first notification will throw E_ELEMENT_NOT_FOUND
+                    _logger.LogInformation(comEx, "Cannot get notification setting, maybe it is the first run");
+                }
+                else
+                {
+                    _logger.LogWarning(ex, "Error while getting notification setting, continue anyway");
+                }
+                return;
+            }
             if (setting != NotificationSetting.Enabled)
             {
                 _logger.LogError($"notification is disabled: {setting}");
