@@ -134,6 +134,10 @@ There are usage examples with images on the [Wiki](https://github.com/ultrabig/W
     ```
     Remove quotes when you want to use cmd.exe
 
+## Known issues
+
+- It is not expected to run on multiple WSL instances simultaneously
+
 ## Limitations
 
 - Markup is not supported
