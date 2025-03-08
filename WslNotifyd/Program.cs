@@ -11,6 +11,10 @@ using WslNotifyd.DBus;
 using WslNotifyd.GrpcServices;
 using WslNotifyd.Services;
 
+#if !DEBUG
+using WslNotifyd.Constants;
+#endif
+
 internal class Program
 {
 
@@ -66,7 +70,7 @@ internal class Program
 #else
         var notifydWinPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "WslNotifydWin/scripts/runner-release.sh");
         var workingDirectory = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "WslNotifydWin");
-        var hashString = new string(new Random().GetItems("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".ToCharArray(), 10));
+        var hashString = GitInfo.GitHash;
 #endif
         builder.Services.AddSingleton(serviceProvider =>
         {

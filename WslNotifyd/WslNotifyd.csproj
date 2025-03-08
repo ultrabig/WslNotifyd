@@ -7,6 +7,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <GenerateGitHashFile>true</GenerateGitHashFile>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.67.0" />
     <PackageReference Include="GtkSharp" Version="3.24.24.95" />
@@ -16,5 +20,13 @@
   <ItemGroup>
     <Protobuf Include="..\Protos\notification.proto" GrpcServices="Server" />
   </ItemGroup>
+
+  <!-- Generate GitHash.cs file with git hash constant -->
+  <Target Name="GenerateGitHashFile" BeforeTargets="CoreCompile" Condition="'$(GenerateGitHashFile)' == 'true'">
+    <Exec Command="$(ProjectDir)\scripts\generate-git-hash.sh $(IntermediateOutputPath)GitHash.cs" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)GitHash.cs" />
+    </ItemGroup>
+  </Target>
 
 </Project>
