@@ -25,6 +25,11 @@ WslNotifyd is an implementation of the [Desktop Notifications Specification](htt
     cd WslNotifyd
     dotnet publish WslNotifyd -o out && dotnet publish WslNotifydWin --runtime win-x64 -o out/WslNotifydWin --self-contained
     ```
+
+   If you're building from a source tarball or in an environment where git is not available, you can specify a custom git hash:
+   ```sh
+   dotnet publish WslNotifyd -p:CustomGitHash="$(date +%Y%m%d%H%M%S)" -o out && dotnet publish WslNotifydWin --runtime win-x64 -o out/WslNotifydWin --self-contained
+   ```
 4. Run the app
     ```sh
     ./out/WslNotifyd

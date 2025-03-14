@@ -9,6 +9,7 @@
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <GenerateGitHashFile>true</GenerateGitHashFile>
+    <CustomGitHash></CustomGitHash>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,7 +24,34 @@
 
   <!-- Generate GitHash.cs file with git hash constant -->
   <Target Name="GenerateGitHashFile" BeforeTargets="CoreCompile" Condition="'$(GenerateGitHashFile)' == 'true'">
-    <Exec Command="$(ProjectDir)\scripts\generate-git-hash.sh $(IntermediateOutputPath)GitHash.cs" />
+    <!-- Get git hash if CustomGitHash is not provided -->
+    <Exec 
+      Command="git rev-parse --short HEAD" 
+      ConsoleToMSBuild="true"
+      StandardOutputImportance="low"
+      IgnoreExitCode="false"
+      Condition="'$(CustomGitHash)' == ''">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitHash" />
+    </Exec>
+
+    <!-- Use CustomGitHash if provided, otherwise use the git hash we just got -->
+    <PropertyGroup>
+      <FinalGitHash Condition="'$(CustomGitHash)' != ''">$(CustomGitHash)</FinalGitHash>
+      <FinalGitHash Condition="'$(CustomGitHash)' == ''">$(GitHash)</FinalGitHash>
+    </PropertyGroup>
+
+    <!-- Generate the GitHash.cs file -->
+    <WriteLinesToFile 
+      File="$(IntermediateOutputPath)GitHash.cs" 
+      Lines="namespace WslNotifyd.Constants
+{
+    internal static class GitInfo
+    {
+        public const string GitHash = &quot;$(FinalGitHash)&quot;%3B
+    }
+}"
+      Overwrite="true" />
+
     <ItemGroup>
       <Compile Include="$(IntermediateOutputPath)GitHash.cs" />
     </ItemGroup>
